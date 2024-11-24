@@ -25,17 +25,21 @@
     <!-- Movie Views -->
     <MovieGrid v-if="currentView === 'grid'" :fetchUrl="fetchUrl" />
     <MovieInfiniteScroll
-      v-if="currentView === 'list'"
+      v-else
       :apiKey="apiKey"
       :fetchUrl="fetchUrl"
-      genreCode="0"
-      sortingOrder="all"
+      :genreCode="'0'"
+      :sortingOrder="'popularity.desc'"
       :voteAverage="-1"
+      :year="null"
+      :adult="false"
+      :runtime="null"
+      :language="null"
     />
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, computed } from 'vue'
 import { faTh, faBars } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -43,42 +47,16 @@ import MovieGrid from '@/components/views/MovieGridComponent.vue'
 import MovieInfiniteScroll from '@/components/views/MovieInfiniteScrollComponent.vue'
 import URLService from '@/services/urlService'
 
-export default {
-  name: 'HomePopularComponent',
-  components: {
-    FontAwesomeIcon,
-    MovieGrid,
-    MovieInfiniteScroll,
-  },
-  setup() {
-    // API Key from .env
-    const apiKey = import.meta.env.VITE_TMDB_API_KEY || ''
-    if (!apiKey) {
-      console.error('API Key is missing! Please check your .env file.')
-    }
+const apiKey = import.meta.env.VITE_TMDB_API_KEY
+const currentView = ref('grid')
 
-    // Current view state: 'grid' or 'list'
-    const currentView = ref('grid')
+const fetchUrl = computed(() => {
+  return URLService.getURL4PopularMovies()
+})
 
-    // Fetch URL for popular movies
-    const fetchUrl = computed(() => {
-      return URLService.getURL4PopularMovies(1)
-    })
-
-    // View toggle function
-    const setView = (view) => {
-      currentView.value = view
-    }
-
-    return {
-      faTh,
-      faBars,
-      apiKey,
-      fetchUrl,
-      currentView,
-      setView,
-    }
-  },
+const setView = (view) => {
+  currentView.value = view
+  console.log('View changed to:', view)
 }
 </script>
 

@@ -38,14 +38,12 @@ import { useWishlist } from '@/services/wishlistService'
 const props = defineProps({
   genreCode: String,
   apiKey: String,
-  sortingOrder: {
-    type: String,
-    default: 'all',
-  },
-  voteAverage: {
-    type: Number,
-    default: -1,
-  },
+  sortingOrder: String,
+  voteAverage: Number,
+  year: String,
+  adult: Boolean,
+  runtime: Object,
+  language: String,
   fetchUrl: String,
 })
 
@@ -69,23 +67,18 @@ async function fetchMovies() {
   isLoading.value = true
   try {
     let url
+    // fetchUrl이 제공된 경우 (Popular 리스트용)
     if (props.fetchUrl) {
-      url = props.fetchUrl
+      url = `${props.fetchUrl}&page=${currentPage.value}`
+      console.log('Using provided fetchUrl:', url)
     } else {
-      // API 키 확인
-      if (!props.apiKey) {
-        throw new Error('API Key is not provided')
-      }
-
-      // 검색 조건에 따른 URL 구성
+      // 검색 조건에 따른 URL 구성 (Search 컴포넌트용)
       url = `https://api.themoviedb.org/3/discover/movie?api_key=${props.apiKey}&language=ko-KR&page=${currentPage.value}`
 
-      // 장르 필터
-      if (props.genreCode && props.genreCode !== '28') {
+      if (props.genreCode && props.genreCode !== '0') {
         url += `&with_genres=${props.genreCode}`
       }
 
-      // 평점 필터
       if (props.voteAverage > 0) {
         if (props.voteAverage === -2) {
           url += `&vote_average.lte=4`
@@ -94,18 +87,18 @@ async function fetchMovies() {
         }
       }
 
-      // 언어 필터
-      if (props.sortingOrder !== 'all') {
-        url += `&with_original_language=${props.sortingOrder}`
+      if (props.sortingOrder && props.sortingOrder !== 'all') {
+        url += `&sort_by=${props.sortingOrder}`
       }
+
+      // ... other filters ...
     }
 
-    console.log('Fetching URL:', url)
+    console.log('Final fetch URL:', url)
     const response = await axios.get(url)
     const newMovies = response.data.results || []
 
     if (newMovies.length > 0) {
-      // 새로운 옵션이 선택되었을 때 기존 영화 목록을 초기화
       if (currentPage.value === 1) {
         movies.value = newMovies
       } else {
@@ -115,6 +108,8 @@ async function fetchMovies() {
     } else {
       hasMore.value = false
     }
+
+    console.log(`Fetched ${newMovies.length} movies`)
   } catch (error) {
     console.error('Error fetching movies:', error)
     hasMore.value = false
@@ -138,7 +133,10 @@ function setupIntersectionObserver() {
 }
 
 onMounted(() => {
-  setupIntersectionObserver()
+  console.log('Component mounted, fetching movies...')
+  movies.value = []
+  currentPage.value = 1
+  hasMore.value = true
   fetchMovies()
 })
 
@@ -146,13 +144,27 @@ onUnmounted(() => {
   if (observer) observer.disconnect()
 })
 
-// props가 변경될 때 영화 목록을 리셋하고 다시 불러오기
-watch([() => props.genreCode, () => props.sortingOrder, () => props.voteAverage], () => {
-  movies.value = []
-  currentPage.value = 1
-  hasMore.value = true
-  fetchMovies()
-})
+// props 변경 감지
+watch(
+  [
+    () => props.fetchUrl,
+    () => props.genreCode,
+    () => props.sortingOrder,
+    () => props.voteAverage,
+    () => props.year,
+    () => props.adult,
+    () => props.runtime,
+    () => props.language,
+  ],
+  () => {
+    console.log('Props changed, resetting and fetching new movies')
+    movies.value = []
+    currentPage.value = 1
+    hasMore.value = true
+    fetchMovies()
+  },
+  { deep: true },
+)
 </script>
 
 <style scoped>

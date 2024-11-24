@@ -30,12 +30,28 @@ const dropdowns = {
   genre: ['장르 (전체)', 'Action', 'Adventure', 'Comedy', 'Crime', 'Family'],
   rating: ['평점 (전체)', '9~10', '8~9', '7~8', '6~7', '5~6', '4~5', '4점 이하'],
   language: ['언어 (전체)', '영어', '한국어'],
+  year: ['연도 (전체)', '2024', '2023', '2022', '2021', '2020'],
+  sort: [
+    '정렬 (기본)',
+    '인기도 높은순',
+    '인기도 낮은순',
+    '평점 높은순',
+    '평점 낮은순',
+    '최신순',
+    '오래된순',
+  ],
+  adult: ['성인물 (제외)', '성인물 포함'],
+  runtime: ['상영시간 (전체)', '90분 이하', '90-120분', '120분 이상'],
 }
 
 const selectedOptions = reactive({
   genre: '장르 (전체)',
   rating: '평점 (전체)',
   language: '언어 (전체)',
+  year: '연도 (전체)',
+  sort: '정렬 (기본)',
+  adult: '성인물 (제외)',
+  runtime: '상영시간 (전체)',
 })
 
 function toggleDropdown(key) {
@@ -46,11 +62,14 @@ function selectOption(key, option) {
   selectedOptions[key] = option
   activeDropdown.value = null
 
-  // 선택된 옵션을 적절한 형식으로 변환하여 emit
   const emitOptions = {
     genre: selectedOptions.genre,
     rating: selectedOptions.rating,
     language: selectedOptions.language,
+    year: selectedOptions.year,
+    sort: selectedOptions.sort,
+    adult: selectedOptions.adult,
+    runtime: selectedOptions.runtime,
   }
 
   console.log('Emitting options:', emitOptions)
