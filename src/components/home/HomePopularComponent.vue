@@ -27,10 +27,10 @@
     <MovieInfiniteScroll
       v-if="currentView === 'list'"
       :apiKey="apiKey"
-      genreCode="0"
-      :sortingOrder="'all'"
-      :voteAverage="-1"
       :fetchUrl="fetchUrl"
+      genreCode="0"
+      sortingOrder="all"
+      :voteAverage="-1"
     />
   </div>
 </template>

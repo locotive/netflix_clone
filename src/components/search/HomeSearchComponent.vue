@@ -17,15 +17,18 @@ import { ref } from 'vue'
 import MovieSearch from './MovieSearchComponent.vue'
 import MovieInfiniteScroll from '../views/MovieInfiniteScrollComponent.vue'
 
-const apiKey = import.meta.env.VITE_API_KEY
+const apiKey = import.meta.env.VITE_TMDB_API_KEY
+if (!apiKey) {
+  console.error('API Key is not defined in environment variables')
+}
+
 const genreId = ref('28')
 const ageId = ref(-1)
 const sortId = ref('all')
 
 function changeOptions(options) {
-  console.log('Received options:', options)
+  console.log('Received options in HomeSearch:', options)
 
-  // 장르 코드 매핑
   const genreCode = {
     '장르 (전체)': '28',
     Action: '28',
@@ -35,7 +38,6 @@ function changeOptions(options) {
     Family: '10751',
   }
 
-  // 평점 코드 매핑
   const ratingCode = {
     '평점 (전체)': -1,
     '9~10': 9,
@@ -47,7 +49,6 @@ function changeOptions(options) {
     '4점 이하': -2,
   }
 
-  // 언어 코드 매핑
   const sortingCode = {
     '언어 (전체)': 'all',
     영어: 'en',
@@ -58,7 +59,7 @@ function changeOptions(options) {
   ageId.value = ratingCode[options.rating] || -1
   sortId.value = sortingCode[options.language] || 'all'
 
-  console.log('Changed values:', {
+  console.log('Updated values:', {
     genre: genreId.value,
     rating: ageId.value,
     language: sortId.value,
