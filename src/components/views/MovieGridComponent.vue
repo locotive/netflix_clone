@@ -606,61 +606,6 @@ const currentView = ref('grid')
 
 const { toggleWishlist, isInWishlist } = useWishlist()
 
-// 툴팁 상태 관리
-const tooltip = ref({
-  visible: false,
-  text: '',
-  style: {
-    top: '0px',
-    left: '0px',
-  },
-})
-
-// 마우스 위치 관리
-const mousePosition = ref({ x: 0, y: 0 })
-
-// 마우스 위치 갱신
-function updateMousePosition(event) {
-  mousePosition.value = {
-    x: event.clientX,
-    y: event.clientY,
-  }
-}
-
-// 툴팁 표시 함수
-function showTooltip(text, event) {
-  tooltip.value.text = text
-  tooltip.value.visible = true
-  tooltip.value.style = {
-    top: `${event.clientY + 10}px`,
-    left: `${event.clientX + 10}px`,
-  }
-}
-
-// 툴팁 숨김 함수
-function hideTooltip() {
-  tooltip.value.visible = false
-}
-
-// 1.5초마다 툴팁 위치를 갱신
-let tooltipUpdater = null
-function startTooltipUpdater() {
-  tooltipUpdater = setInterval(() => {
-    if (tooltip.value.visible) {
-      tooltip.value.style = {
-        top: `${mousePosition.value.y + 10}px`,
-        left: `${mousePosition.value.x + 10}px`,
-      }
-    }
-  }, 1500)
-}
-
-function stopTooltipUpdater() {
-  if (tooltipUpdater) {
-    clearInterval(tooltipUpdater)
-    tooltipUpdater = null
-  }
-}
 
 const isLoading = ref(false)
 
@@ -723,12 +668,10 @@ onMounted(async () => {
   await fetchMovies()
   calculateLayout()
   window.addEventListener('resize', handleResize)
-  startTooltipUpdater()
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  stopTooltipUpdater()
 })
 
 const selectedMovie = ref(null)

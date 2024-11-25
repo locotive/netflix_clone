@@ -15,7 +15,7 @@
     <template v-else>
       <!-- 그리드 뷰 -->
       <div v-if="currentView === 'grid'" class="movie-grid">
-        <div class="grid-container"></div>
+        <div class="grid-container">
           <div class="movie-row">
             <div v-for="movie in wishlist" :key="movie.id" class="movie-card">
               <div class="poster-container" @click="toggleWishlist(movie)">
