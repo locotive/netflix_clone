@@ -31,7 +31,9 @@
             class="movie-card"
             @click="handleWishlistToggle(movie)"
           >
-            <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
+            <div class="image-wrapper">
+              <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
+            </div>
             <!-- 좋아요 인디케이터 -->
             <div v-if="isInWishlist(movie.id)" class="wishlist-indicator">👍</div>
           </div>
@@ -174,6 +176,23 @@ function handleWishlistToggle(movie) {
   display: inline-block;
   aspect-ratio: 27/40;
   transition: transform 0.3s;
+  transform-origin: center center;
+  margin-top: 10px;
+  margin-bottom:15px;
+}
+
+.movie-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.image-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 4px;
 }
 
 .movie-card:hover {
@@ -191,6 +210,7 @@ function handleWishlistToggle(movie) {
   border-radius: 0 4px 0 4px;
   padding: 5px 8px;
   color: white;
+  z-index: 2;
 }
 
 .movie-row {
@@ -198,43 +218,40 @@ function handleWishlistToggle(movie) {
   position: relative;
   width: 100%;
   overflow: hidden;
+  margin-top: 10px;
 }
 
 .movie-row h2 {
   text-align: left;
-  margin-left: 30px;
+  margin-left: 10px;
+  margin-top: 15px;
+  margin-bottom: 10px;
 }
 
 .slider-container {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  padding: 2px 0;
   touch-action: pan-y;
   display: flex;
   justify-content: center;
 }
 
 .slider-window {
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
   margin: 0 auto;
   max-width: 95vw;
+  padding: 2px 0;
 }
 
 .movie-slider {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(calc(14.28% - 10px), 200px);
+  grid-auto-columns: minmax(calc(14.28% - 20px), 200px);
   gap: 20px;
-  transition: transform 3s ease;
-  grid-template-rows: auto;
-  white-space: nowrap;
-}
-
-.movie-card img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 4px;
+  transition: transform 0.3s ease;
+  overflow: visible;
 }
 
 .slider-button {
