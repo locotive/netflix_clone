@@ -98,15 +98,8 @@ function changeOptions(options) {
 <style scoped>
 .container-search {
   width: 100%;
-  max-width: 2000px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 20px;
-}
-
-/* 모바일 대응 */
-@media (max-width: 768px) {
-  .container-search {
-    padding: 10px;
-  }
+  padding: 20px 0;
 }
 </style>

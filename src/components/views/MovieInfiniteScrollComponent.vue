@@ -173,21 +173,31 @@ onUnmounted(() => {
 .movie-list {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 20px;
-  max-width: 1400px;
+  width: 98%;
+  max-width: 2400px;
   margin: 0 auto;
+  gap: 30px;
+  padding: 20px 10px;
 }
 
 .movie-item {
-  display: flex;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.3s ease;
+  width: 100%;
   position: relative;
-  cursor: pointer;
+  display: flex;
+  background: #333;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.movie-item img {
+  width: 200px;
   height: 300px;
+  object-fit: cover;
+}
+
+.movie-info {
+  padding: 20px;
+  flex-grow: 1;
 }
 
 .movie-item:hover {
@@ -226,13 +236,6 @@ onUnmounted(() => {
 
 .movie-item:hover .movie-poster {
   transform: scale(1.05);
-}
-
-.movie-info {
-  flex: 1;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
 }
 
 .movie-info h3 {
@@ -298,5 +301,27 @@ onUnmounted(() => {
   text-align: center;
   padding: 20px;
   color: white;
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  .movie-list {
+    width: 100%;
+    padding: 10px;
+    gap: 15px;
+  }
+
+  .movie-item {
+    flex-direction: column;
+  }
+
+  .movie-item img {
+    width: 100%;
+    height: auto;
+  }
+
+  .movie-info {
+    padding: 15px;
+  }
 }
 </style>
