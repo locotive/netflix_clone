@@ -174,7 +174,7 @@ function selectOption(key, option) {
 }
 
 .dropdown-button:hover {
-  background: #f5f5f5;
+  background: #444;
 }
 
 .dropdown-content {
@@ -195,10 +195,30 @@ function selectOption(key, option) {
   padding: 12px 15px;
   cursor: pointer;
   font-size: 1rem;
+  transition: background-color 0.2s ease;
 }
 
 .dropdown-item:hover {
-  background-color: #575757;
+  background-color: #444;
+  color: #fff;
+}
+
+/* 스크롤바 스타일링 */
+.dropdown-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dropdown-content::-webkit-scrollbar-track {
+  background: #333;
+}
+
+.dropdown-content::-webkit-scrollbar-thumb {
+  background: #666;
+  border-radius: 4px;
+}
+
+.dropdown-content::-webkit-scrollbar-thumb:hover {
+  background: #888;
 }
 
 /* 모바일 대응 */
