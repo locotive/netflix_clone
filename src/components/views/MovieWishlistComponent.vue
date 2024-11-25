@@ -18,12 +18,17 @@
         <div class="grid-container">
           <div class="movie-row">
             <div v-for="movie in wishlist" :key="movie.id" class="movie-card">
-              <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
+              <div class="poster-container" @click="toggleWishlist(movie)">
+                <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
+                <div class="remove-overlay">
+                  <font-awesome-icon :icon="faHeart" class="heart-icon" />
+                  <span>찜 해제</span>
+                </div>
+              </div>
               <div class="movie-title">{{ movie.title }}</div>
               <div class="grid-actions">
-                <button class="grid-info-btn" @click="showMovieDetails(movie)">
-                  <font-awesome-icon :icon="faCircleInfo" />
-                  <span>상세정보</span>
+                <button class="grid-info-btn" @click.stop="showMovieDetails(movie)">
+                  상세정보
                 </button>
               </div>
             </div>
@@ -197,6 +202,40 @@ function closeModal() {
 .poster-container {
   position: relative;
   cursor: pointer;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.poster-container:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.remove-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  color: white;
+}
+
+.remove-overlay .heart-icon {
+  font-size: 2em;
+  color: #e50914;
+  margin-bottom: 10px;
+}
+
+.poster-container:hover .remove-overlay {
+  opacity: 1;
 }
 
 .wishlist-indicator {
@@ -563,33 +602,37 @@ function closeModal() {
 /* 그리드 뷰 버튼 스타일 수정 */
 .grid-actions {
   position: absolute;
-  bottom: 16px;
-  right: 16px;
+  bottom: 10px;
+  right: 10px;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
+  z-index: 2;
 }
 
 .grid-info-btn {
-  background-color: rgba(255, 255, 255, 0.9);
-  color: black;
-  border: none;
   padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
+  border-radius: 20px;
+  background: rgba(180, 180, 180, 0.9);
+  backdrop-filter: blur(4px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: #1a1a1a;
   font-size: 0.9em;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: transform 0.2s ease;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .grid-info-btn:hover {
   transform: scale(1.05);
-  background-color: white;
+  background: rgba(210, 210, 210, 1);
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
 }
 
 .movie-card:hover .grid-actions {
   opacity: 1;
+  transform: translateY(-5px);
 }
 
 /* 호버 시에도 제목 크기 유지 */
