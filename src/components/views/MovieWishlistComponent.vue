@@ -692,17 +692,4 @@ function closeModal() {
   transition: transform 0.3s ease;
 }
 
-.movie-card.recommended::after {
-  content: '추천됨';
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: #1db954;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 500;
-  z-index: 3;
-}
 </style>
