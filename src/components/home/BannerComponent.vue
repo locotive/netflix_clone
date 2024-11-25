@@ -63,7 +63,6 @@
 import { computed, ref } from 'vue'
 import { faHeart, faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
 import { useWishlist } from '@/services/wishlistService'
-import { useToast } from "vue-toastification"
 
 const props = defineProps({
   movie: {
@@ -72,7 +71,6 @@ const props = defineProps({
   }
 })
 
-const toast = useToast()
 const { toggleWishlist: toggleWishlistService, isInWishlist } = useWishlist()
 const selectedMovie = ref(null)
 
@@ -84,14 +82,7 @@ const bannerStyle = computed(() => ({
 }))
 
 function handleWishlistToggle(movie) {
-  const wasInWishlist = isInWishlist(movie.id)
   toggleWishlistService(movie)
-
-  if (!wasInWishlist) {
-    toast.success(`'${movie.title}' 위시리스트에 추가되었습니다!`)
-  } else {
-    toast.info(`'${movie.title}' 위시리스트에서 제거되었습니다.`)
-  }
 }
 
 function showMovieDetails() {
