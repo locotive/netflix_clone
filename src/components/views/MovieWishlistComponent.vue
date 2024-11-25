@@ -24,7 +24,7 @@
 
     <!-- Grid View -->
     <div v-if="currentView === 'grid'" ref="gridContainer" class="grid-container">
-      <div v-for="(movie, index) in wishlistMovies" :key="index" class="movie-card">
+      <div v-for="movie in wishlist" :key="movie.id" class="movie-card">
         <div class="poster-container">
           <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
           <div class="movie-info">
@@ -39,22 +39,18 @@
 
     <!-- List View -->
     <div v-else class="movie-list-container">
-      <div v-for="movie in wishlistMovies" :key="movie.id" class="movie-item">
+      <div v-for="movie in wishlist" :key="movie.id" class="movie-item">
         <div class="movie-poster">
           <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
         </div>
         <div class="movie-info">
           <h3 class="movie-title">{{ movie.title }}</h3>
-          <div class="movie-genres">
-            {{ movie.genres?.map((genre) => genre.name).join(', ') }}
-          </div>
           <p class="movie-overview">{{ movie.overview }}</p>
           <div class="movie-details">
             <span class="movie-rating">
               <font-awesome-icon :icon="faStar" class="star-icon" />
               {{ movie.vote_average?.toFixed(1) }}
             </span>
-            <span class="movie-runtime" v-if="movie.runtime"> {{ movie.runtime }}분 </span>
             <span class="movie-year">
               {{ movie.release_date?.split('-')[0] }}
             </span>
@@ -66,97 +62,24 @@
       </div>
     </div>
 
-    <div v-if="wishlistMovies.length === 0" class="empty-wishlist">위시리스트가 비어 있습니다.</div>
+    <div v-if="wishlist.length === 0" class="empty-wishlist">위시리스트가 비어 있습니다.</div>
   </div>
 </template>
 
-<script>
-import { ref, watch, onMounted } from 'vue'
+<script setup>
+import { ref } from 'vue'
 import { useWishlist } from '@/services/wishlistService'
 import { faHeart, faTh, faBars, faStar } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import axios from 'axios'
 
-export default {
-  name: 'MovieWishlistComponent',
-  components: {
-    FontAwesomeIcon,
-  },
-  setup() {
-    const { getCurrentWishlist, toggleWishlist } = useWishlist()
-    const wishlistMovies = ref([])
-    const currentView = ref('grid')
-    const apiKey = import.meta.env.VITE_TMDB_API_KEY
+const currentView = ref('grid')
+const { wishlist, toggleWishlist } = useWishlist()
 
-    const fetchMovieDetails = async (movie) => {
-      try {
-        console.log('Fetching details for movie:', movie.id)
-        const response = await axios.get(
-          `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${apiKey}&language=ko-KR`,
-        )
-        console.log('Received movie details:', response.data)
-        return { ...movie, ...response.data }
-      } catch (error) {
-        console.error(`Error fetching details for movie ${movie.id}:`, error)
-        return movie
-      }
-    }
+function getImageUrl(path) {
+  return path ? `https://image.tmdb.org/t/p/w500${path}` : '/placeholder.jpg'
+}
 
-    const fetchAllMovieDetails = async () => {
-      const currentWishlist = getCurrentWishlist()
-      console.log('Current wishlist from movieWishlist:', currentWishlist)
-
-      if (!currentWishlist || currentWishlist.length === 0) {
-        console.log('Wishlist is empty')
-        wishlistMovies.value = []
-        return
-      }
-
-      try {
-        const detailedMovies = await Promise.all(
-          currentWishlist.map((movie) => fetchMovieDetails(movie)),
-        )
-        console.log('All detailed movies:', detailedMovies)
-        wishlistMovies.value = detailedMovies
-      } catch (error) {
-        console.error('Error fetching all movie details:', error)
-      }
-    }
-
-    onMounted(() => {
-      console.log('Component mounted')
-      fetchAllMovieDetails()
-    })
-
-    watch(
-      () => getCurrentWishlist(),
-      (newWishlist) => {
-        console.log('Wishlist changed:', newWishlist)
-        fetchAllMovieDetails()
-      },
-      { immediate: true },
-    )
-
-    const getImageUrl = (posterPath) => {
-      return posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : '/placeholder-image.jpg'
-    }
-
-    const setView = (view) => {
-      currentView.value = view
-    }
-
-    return {
-      wishlistMovies,
-      toggleWishlist,
-      getImageUrl,
-      currentView,
-      setView,
-      faHeart,
-      faTh,
-      faBars,
-      faStar,
-    }
-  },
+function setView(view) {
+  currentView.value = view
 }
 </script>
 
