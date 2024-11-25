@@ -144,27 +144,33 @@ function selectOption(key, option) {
 <style scoped>
 .search-container {
   width: 100%;
+  max-width: 2000px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
 .dropdown-group {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .dropdown {
   position: relative;
-  min-width: 150px;
+  width: 100%;
 }
 
 .dropdown-button {
   width: 100%;
-  padding: 10px;
-  background: #fff;
-  border: 1px solid #ddd;
+  padding: 12px 15px;
+  background: #333;
+  border: 1px solid #555;
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
+  color: white;
+  font-size: 1rem;
 }
 
 .dropdown-button:hover {
@@ -177,18 +183,38 @@ function selectOption(key, option) {
   left: 0;
   right: 0;
   background-color: #333;
-  border: 1px solid #fff;
+  border: 1px solid #555;
+  border-radius: 4px;
   z-index: 99;
-  display: block;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .dropdown-item {
   color: white;
-  padding: 10px;
+  padding: 12px 15px;
   cursor: pointer;
+  font-size: 1rem;
 }
 
 .dropdown-item:hover {
   background-color: #575757;
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  .dropdown-group {
+    grid-template-columns: 1fr;
+  }
+
+  .dropdown-button {
+    padding: 15px;
+    font-size: 1.1rem;
+  }
+
+  .dropdown-item {
+    padding: 15px;
+    font-size: 1.1rem;
+  }
 }
 </style>
