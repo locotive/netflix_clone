@@ -61,7 +61,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { faHeart, faInfoCircle, faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
+import { faHeart, faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
 import { useWishlist } from '@/services/wishlistService'
 import { useToast } from "vue-toastification"
 
