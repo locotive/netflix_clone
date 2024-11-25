@@ -27,10 +27,63 @@ const emit = defineEmits(['changeOptions'])
 const activeDropdown = ref(null)
 
 const dropdowns = {
-  genre: ['장르 (전체)', 'Action', 'Adventure', 'Comedy', 'Crime', 'Family'],
-  rating: ['평점 (전체)', '9~10', '8~9', '7~8', '6~7', '5~6', '4~5', '4점 이하'],
-  language: ['언어 (전체)', '영어', '한국어'],
-  year: ['연도 (전체)', '2024', '2023', '2022', '2021', '2020'],
+  genre: [
+    '장르 (전체)',
+    '액션',
+    '모험',
+    '애니메이션',
+    '코미디',
+    '범죄',
+    '다큐멘터리',
+    '드라마',
+    '가족',
+    '판타지',
+    '역사',
+    '공포',
+    '음악',
+    '미스터리',
+    '로맨스',
+    'SF',
+    'TV 영화',
+    '스릴러',
+    '전쟁',
+    '서부'
+  ],
+  rating: [
+    '평점 (전체)',
+    '9점 이상',
+    '8점 이상',
+    '7점 이상',
+    '6점 이상',
+    '5점 이상',
+    '4점 이상',
+    '3점 이상'
+  ],
+  language: [
+    '언어 (전체)',
+    '한국어',
+    '영어',
+    '일본어',
+    '중국어',
+    '프랑스어',
+    '독일어',
+    '스페인어',
+    '이탈리아어',
+    '러시아어'
+  ],
+  year: [
+    '연도 (전체)',
+    '2024',
+    '2023',
+    '2022',
+    '2021',
+    '2020',
+    '2019',
+    '2018',
+    '2017',
+    '2016',
+    '2015'
+  ],
   sort: [
     '정렬 (기본)',
     '인기도 높은순',
@@ -39,9 +92,23 @@ const dropdowns = {
     '평점 낮은순',
     '최신순',
     '오래된순',
+    '수익 높은순',
+    '수익 낮은순',
+    '제목 오름차순',
+    '제목 내림차순'
   ],
-  adult: ['성인물 (제외)', '성인물 포함'],
-  runtime: ['상영시간 (전체)', '90분 이하', '90-120분', '120분 이상'],
+  runtime: [
+    '상영시간 (전체)',
+    '60분 이하',
+    '60-90분',
+    '90-120분',
+    '120-150분',
+    '150분 이상'
+  ],
+  adult: [
+    '성인물 제외',
+    '성인물 포함'
+  ]
 }
 
 const selectedOptions = reactive({
@@ -50,8 +117,8 @@ const selectedOptions = reactive({
   language: '언어 (전체)',
   year: '연도 (전체)',
   sort: '정렬 (기본)',
-  adult: '성인물 (제외)',
   runtime: '상영시간 (전체)',
+  adult: '성인물 제외'
 })
 
 function toggleDropdown(key) {
@@ -62,18 +129,15 @@ function selectOption(key, option) {
   selectedOptions[key] = option
   activeDropdown.value = null
 
-  const emitOptions = {
+  emit('changeOptions', {
     genre: selectedOptions.genre,
     rating: selectedOptions.rating,
     language: selectedOptions.language,
     year: selectedOptions.year,
     sort: selectedOptions.sort,
-    adult: selectedOptions.adult,
     runtime: selectedOptions.runtime,
-  }
-
-  console.log('Emitting options:', emitOptions)
-  emit('changeOptions', emitOptions)
+    adult: selectedOptions.adult
+  })
 }
 </script>
 
