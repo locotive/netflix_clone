@@ -1,11 +1,23 @@
 <template>
-  <div class="wishlist-container">
-    <!-- 뷰 토글 버튼 -->
-    <div class="view-toggle">
-      <button @click="currentView = 'grid'" :class="{ active: currentView === 'grid' }">
+  <div class="popular-container">
+    <!-- View Toggle Buttons -->
+    <div class="view-toggle" role="tablist">
+      <button
+        @click="setView('grid')"
+        :class="{ active: currentView === 'grid' }"
+        :aria-selected="currentView === 'grid'"
+        aria-label="그리드 보기"
+        role="tab"
+      >
         <font-awesome-icon :icon="faTh" />
       </button>
-      <button @click="currentView = 'list'" :class="{ active: currentView === 'list' }">
+      <button
+        @click="setView('list')"
+        :class="{ active: currentView === 'list' }"
+        :aria-selected="currentView === 'list'"
+        aria-label="리스트 보기"
+        role="tab"
+      >
         <font-awesome-icon :icon="faBars" />
       </button>
     </div>
@@ -33,85 +45,50 @@
               </div>
             </div>
           </div>
+          <button @click="toggleWishlist(movie)" class="remove-button">
+            <font-awesome-icon :icon="faHeart" />
+          </button>
         </div>
       </div>
+    </div>
 
-      <!-- 리스트 뷰 -->
-      <div v-else class="list-view">
-        <div v-for="movie in wishlist" :key="movie.id" class="list-item">
-          <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" class="list-poster" />
-          <div class="list-content">
-            <h3>{{ movie.title }}</h3>
-            <div class="list-meta">
-              <span>{{ movie.release_date?.split('-')[0] }}</span>
-              <span v-if="movie.runtime">{{ movie.runtime }}분</span>
-              <span>⭐ {{ movie.vote_average?.toFixed(1) }}</span>
-            </div>
-            <p class="list-overview">{{ movie.overview }}</p>
-          </div>
-          <div class="list-actions">
-            <button class="info-btn" @click="showMovieDetails(movie)">
-              <font-awesome-icon :icon="faInfoCircle" /> 상세정보
-            </button>
-            <button class="remove-btn" @click="toggleWishlist(movie)">
-              <font-awesome-icon :icon="faHeart" /> 찜해제
-            </button>
-          </div>
+    <!-- List View -->
+    <div v-else class="movie-list-container">
+      <div v-for="movie in wishlistMovies" :key="movie.id" class="movie-item">
+        <div class="movie-poster">
+          <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
         </div>
-      </div>
-    </template>
-
-    <!-- 모달 -->
-    <div v-if="selectedMovie" class="movie-modal" @click.self="closeModal">
-      <div class="modal-content">
-        <div
-          class="modal-backdrop"
-          :style="{
-            backgroundImage: `url(https://image.tmdb.org/t/p/original${selectedMovie.backdrop_path})`,
-          }"
-        >
-          <div class="backdrop-overlay"></div>
-        </div>
-
-        <button class="close-btn" @click="closeModal">
-          <font-awesome-icon :icon="faTimes" />
-        </button>
-
-        <div class="modal-body">
-          <div class="modal-main-info">
-            <img
-              :src="getImageUrl(selectedMovie.poster_path)"
-              :alt="selectedMovie.title"
-              class="modal-poster"
-            />
-            <div class="modal-text-content">
-              <h2 class="movie-title">{{ selectedMovie.title }}</h2>
-              <div class="meta-info">
-                <span class="rating">
-                  <font-awesome-icon :icon="faStar" /> {{ selectedMovie.vote_average?.toFixed(1) }}
-                </span>
-                <span class="year">{{ selectedMovie.release_date?.split('-')[0] }}</span>
-                <span class="runtime" v-if="selectedMovie.runtime">
-                  {{ selectedMovie.runtime }}분
-                </span>
-              </div>
-              <p class="overview">{{ selectedMovie.overview }}</p>
-              <div class="genre-tags" v-if="selectedMovie.genres">
-                <span v-for="genre in selectedMovie.genres" :key="genre.id" class="genre-tag">
-                  {{ genre.name }}
-                </span>
-              </div>
-            </div>
+        <div class="movie-info">
+          <h3 class="movie-title">{{ movie.title }}</h3>
+          <div class="movie-genres">
+            {{ movie.genres?.map((genre) => genre.name).join(', ') }}
+          </div>
+          <p class="movie-overview">{{ movie.overview }}</p>
+          <div class="movie-details">
+            <span class="movie-rating">
+              <font-awesome-icon :icon="faStar" class="star-icon" />
+              {{ movie.vote_average?.toFixed(1) }}
+            </span>
+            <span class="movie-runtime" v-if="movie.runtime"> {{ movie.runtime }}분 </span>
+            <span class="movie-year">
+              {{ movie.release_date?.split('-')[0] }}
+            </span>
+            <button @click="toggleWishlist(movie)" class="remove-button">
+              <font-awesome-icon :icon="faHeart" />
+            </button>
           </div>
         </div>
       </div>
     </div>
+
+    <div v-if="wishlistMovies.length === 0" class="empty-wishlist">위시리스트가 비어 있습니다.</div>
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script>
+import { ref, watch, onMounted } from 'vue'
 import { useWishlist } from '@/services/wishlistService'
+
 import {
   faHeart,
   faTh,
@@ -463,7 +440,7 @@ function closeModal() {
   }
 }
 
-/* 뷰 토글 버튼 스타일 수정 */
+/* View Toggle Buttons */
 .view-toggle {
   display: flex;
   justify-content: flex-end;
@@ -483,7 +460,7 @@ function closeModal() {
 }
 
 .view-toggle button.active {
-  background-color: #535bf2; /* Popular 컴포넌트와 동일한 활성 색상 */
+  background-color: #535bf2;
 }
 
 .view-toggle button:focus {
@@ -491,12 +468,21 @@ function closeModal() {
   outline-offset: 2px;
 }
 
-/* 반응형 스타일 */
-@media (max-width: 768px) {
-  .view-toggle {
-    margin-top: 30px;
-  }
+/* Grid View Styles */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  padding: 20px;
 }
+
+.movie-card {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+
 
 /* 리스트 뷰 스타일 */
 .list-view {
@@ -504,99 +490,82 @@ function closeModal() {
   margin-top: 20px;
 }
 
-.list-item {
-  display: flex;
-  gap: 20px;
+/* List View Styles */
+.movie-list-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  margin-bottom: 15px;
-  transition: transform 0.2s ease;
 }
 
-.list-item:hover {
-  transform: scale(1.01);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.list-poster {
-  width: 100px;
-  height: 150px;
-  object-fit: cover;
-  border-radius: 4px;
-}
-
-.list-content {
-  flex: 1;
-}
-
-.list-content h3 {
-  margin: 0 0 10px 0;
-  font-size: 1.2em;
-}
-
-.list-meta {
+.movie-item {
   display: flex;
-  gap: 15px;
-  color: #999;
-  margin-bottom: 10px;
-}
-
-.list-overview {
-  color: #ccc;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
+  margin-bottom: 20px;
+  background: #1a1a1a;
+  border-radius: 8px;
   overflow: hidden;
-  margin: 0;
+  transition: transform 0.2s;
 }
 
-.list-actions {
+.movie-item:hover {
+  transform: translateY(-2px);
+}
+
+.movie-poster {
+  flex: 0 0 150px;
+}
+
+.movie-poster img {
+  width: 100%;
+  height: 225px;
+  object-fit: cover;
+}
+
+.movie-info {
+  flex: 1;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  justify-content: center;
 }
 
-.list-actions button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+.movie-title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.movie-genres {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.movie-overview {
+  margin: 0;
+  color: #ccc;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.movie-details {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: #999;
+}
+
+.movie-rating {
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: all 0.2s ease;
 }
 
-.list-actions .info-btn {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.list-actions .remove-btn {
-  background: rgba(229, 9, 20, 0.8);
-  color: white;
-}
-
-.list-actions button:hover {
-  transform: scale(1.05);
-}
-
-/* 반응형 스타일 */
-@media (max-width: 768px) {
-  .list-item {
-    flex-direction: column;
-  }
-
-  .list-poster {
-    width: 100%;
-    height: 200px;
-  }
-
-  .list-actions {
-    flex-direction: row;
-    justify-content: flex-end;
-  }
+.star-icon {
+  color: #ffd700;
 }
 
 /* 그리드 뷰 버튼 스타일 수정 */
@@ -633,52 +602,35 @@ function closeModal() {
 .movie-card:hover .grid-actions {
   opacity: 1;
   transform: translateY(-5px);
+
 }
 
-/* 호버 시에도 제목 크기 유지 */
-.movie-card:hover .movie-title {
-  font-size: 14px;
-}
-
-/* 2. 모달 내 영화 제목 스타일 분리 */
-/* 그리드 뷰의 영화 제목 (기존 유지) */
-.movie-title {
-  margin-top: 5px;
-  text-align: center;
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 0 8px;
-  line-height: 1.2;
-  color: #fff;
-}
-
-/* 모달 내 영화 제목 새로운 스타일 */
-.modal-text-content h2.movie-title {
-  font-size: 2.5em;
-  margin: 0 0 15px 0;
-  padding: 0;
-  text-align: left;
-  white-space: normal;
-  line-height: 1.2;
-  color: white;
-  overflow: visible;
-  text-overflow: clip;
-}
-
-/* 모달 내 다른 스타일들은 유지 */
-.modal-main-info {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 30px;
-  margin-top: 150px;
-}
-
-/* 모바일 반응형 스타일 */
 @media (max-width: 768px) {
-  .modal-text-content h2.movie-title {
-    font-size: 1.8em;
+  .popular-container {
+    padding: 10px;
+  }
+
+  .grid-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .movie-item {
+    flex-direction: column;
+  }
+
+  .movie-poster {
+    flex: 0 0 auto;
+  }
+
+  .movie-poster img {
+    width: 100%;
+    height: 300px;
+  }
+
+  .movie-info {
+    padding: 15px;
   }
 }
 
