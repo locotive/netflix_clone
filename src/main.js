@@ -3,8 +3,6 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import './assets/main.css'
-import Toast from "vue-toastification"
-import "vue-toastification/dist/index.css"
 
 // FontAwesome 설정
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -23,17 +21,6 @@ app.use(router)
 
 // FontAwesomeIcon 컴포넌트를 글로벌 등록
 app.component('font-awesome-icon', FontAwesomeIcon)
-
-// Toast 설정
-const toastOptions = {
-    position: "bottom-right",
-    timeout: 3000,
-    closeOnClick: true,
-    pauseOnHover: true
-}
-
-// Toast 사용
-app.use(Toast, toastOptions)
 
 // 애플리케이션 마운트
 app.mount('#app')
