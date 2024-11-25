@@ -114,7 +114,6 @@ import { ref } from 'vue'
 import { useWishlist } from '@/services/wishlistService'
 import {
   faHeart,
-  faCircleInfo,
   faTh,
   faBars,
   faTimes,
@@ -188,7 +187,7 @@ function closeModal() {
 
 .movie-card:hover {
   transform: scale(1.1);
-  z-index: 2;
+  z-index: 1;
 }
 
 .movie-card img {
@@ -546,7 +545,6 @@ function closeModal() {
 .list-overview {
   color: #ccc;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin: 0;
