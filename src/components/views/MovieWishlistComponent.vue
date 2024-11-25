@@ -1,167 +1,77 @@
 <template>
-  <div class="movie-grid" ref="gridContainer">
+  <div class="wishlist-container">
+    <!-- 뷰 토글 버튼 -->
+    <div class="view-toggle">
+      <button @click="currentView = 'grid'" :class="{ active: currentView === 'grid' }">
+        <font-awesome-icon :icon="faTh" />
+      </button>
+      <button @click="currentView = 'list'" :class="{ active: currentView === 'list' }">
+        <font-awesome-icon :icon="faBars" />
+      </button>
+    </div>
+
     <div v-if="wishlist.length === 0" class="empty-message">위시리스트가 비어 있습니다.</div>
-    <div v-else class="grid-container">
-      <div class="movie-row">
-        <div
-          v-for="movie in wishlist"
-          :key="movie.id"
-          class="movie-card"
-          @mouseover="showTooltip(movie.title, $event)"
-          @mouseleave="hideTooltip"
-          @mousemove="updateMousePosition"
-        >
-          <div class="poster-container" @click="toggleWishlist(movie)">
-            <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
-            <div class="wishlist-indicator">
-              <font-awesome-icon :icon="faHeart" />
-            </div>
-          </div>
 
-          <div class="movie-title">{{ movie.title }}</div>
-
-          <button class="info-btn" @click="showMovieDetails(movie)">
-            <font-awesome-icon :icon="faInfoCircle" /> 상세정보
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="tooltip.visible" :style="tooltip.style" class="tooltip">
-      {{ tooltip.text }}
-    </div>
-
-    <div v-if="selectedMovie" class="movie-modal" @click.self="closeModal">
-      <div class="modal-content">
-        <div
-          class="modal-backdrop"
-          :style="{
-            backgroundImage: `url(https://image.tmdb.org/t/p/original${selectedMovie.backdrop_path})`,
-          }"
-        >
-          <div class="backdrop-overlay"></div>
-        </div>
-
-        <button class="close-btn" @click="closeModal">
-          <font-awesome-icon :icon="faTimes" />
-        </button>
-
-        <div class="modal-body">
-          <div class="modal-main-info">
-            <img
-              :src="getImageUrl(selectedMovie.poster_path)"
-              :alt="selectedMovie.title"
-              class="modal-poster"
-            />
-            <div class="modal-text-content">
-              <h2 class="movie-title">{{ selectedMovie.title }}</h2>
-              <div class="meta-info">
-                <span class="rating">
-                  <font-awesome-icon :icon="faStar" /> {{ selectedMovie.vote_average?.toFixed(1) }}
-                </span>
-                <span class="year">{{ selectedMovie.release_date?.split('-')[0] }}</span>
-                <span class="runtime" v-if="selectedMovie.runtime">
-                  {{ selectedMovie.runtime }}분
-                </span>
+    <template v-else>
+      <!-- 그리드 뷰 -->
+      <div v-if="currentView === 'grid'" class="grid-view">
+        <div class="movie-row">
+          <div v-for="movie in wishlist" :key="movie.id" class="movie-card">
+            <div class="poster-container" @click="toggleWishlist(movie)">
+              <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
+              <div class="overlay">
+                <div class="movie-title">{{ movie.title }}</div>
+                <button class="info-btn" @click.stop="showMovieDetails(movie)">
+                  <font-awesome-icon :icon="faInfoCircle" />
+                </button>
               </div>
-              <p class="overview">{{ selectedMovie.overview }}</p>
-              <div class="genre-tags" v-if="selectedMovie.genres">
-                <span v-for="genre in selectedMovie.genres" :key="genre.id" class="genre-tag">
-                  {{ genre.name }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="trailerUrl" class="trailer-section">
-            <h3>트레일러</h3>
-            <div class="trailer-container">
-              <iframe
-                :src="trailerUrl"
-                frameborder="0"
-                allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
-              ></iframe>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- 리스트 뷰 -->
+      <div v-else class="list-view">
+        <div v-for="movie in wishlist" :key="movie.id" class="list-item">
+          <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" class="list-poster" />
+          <div class="list-content">
+            <h3>{{ movie.title }}</h3>
+            <div class="list-meta">
+              <span>{{ movie.release_date?.split('-')[0] }}</span>
+              <span v-if="movie.runtime">{{ movie.runtime }}분</span>
+              <span>⭐ {{ movie.vote_average?.toFixed(1) }}</span>
+            </div>
+            <p class="list-overview">{{ movie.overview }}</p>
+          </div>
+          <div class="list-actions">
+            <button class="info-btn" @click="showMovieDetails(movie)">
+              <font-awesome-icon :icon="faInfoCircle" /> 상세정보
+            </button>
+            <button class="remove-btn" @click="toggleWishlist(movie)">
+              <font-awesome-icon :icon="faHeart" /> 찜해제
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { useWishlist } from '@/services/wishlistService'
-import { faHeart, faInfoCircle, faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
-import axios from 'axios'
+import { faHeart, faInfoCircle, faTh, faBars } from '@fortawesome/free-solid-svg-icons'
 
+const currentView = ref('grid')
 const { wishlist, toggleWishlist } = useWishlist()
 
 function getImageUrl(path) {
   return path ? `https://image.tmdb.org/t/p/w300${path}` : '/placeholder.jpg'
 }
 
-const tooltip = ref({
-  visible: false,
-  text: '',
-  style: {
-    top: '0px',
-    left: '0px',
-  },
-})
-
-function showTooltip(text, event) {
-  tooltip.value.text = text
-  tooltip.value.visible = true
-  tooltip.value.style = {
-    top: `${event.clientY + 10}px`,
-    left: `${event.clientX + 10}px`,
-  }
-}
-
-function hideTooltip() {
-  tooltip.value.visible = false
-}
-
-function updateMousePosition(event) {
-  if (tooltip.value.visible) {
-    tooltip.value.style = {
-      top: `${event.clientY + 10}px`,
-      left: `${event.clientX + 10}px`,
-    }
-  }
-}
-
-const selectedMovie = ref(null)
-const trailerUrl = ref(null)
-
-async function showMovieDetails(movie) {
-  selectedMovie.value = movie
-  await fetchTrailer(movie.id)
-}
-
-async function fetchTrailer(movieId) {
-  try {
-    const apiKey = import.meta.env.VITE_TMDB_API_KEY
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=${apiKey}&language=ko-KR`,
-    )
-    const trailer = response.data.results.find(
-      (video) => video.type === 'Trailer' || video.type === 'Teaser',
-    )
-    if (trailer) {
-      trailerUrl.value = `https://www.youtube.com/embed/${trailer.key}`
-    }
-  } catch (error) {
-    console.error('Error fetching trailer:', error)
-    trailerUrl.value = null
-  }
-}
-
-function closeModal() {
-  selectedMovie.value = null
-  trailerUrl.value = null
+function showMovieDetails(movie) {
+  // 상세 정보 모달 표시 로직
+  console.log('Show details for:', movie.title)
 }
 </script>
 
@@ -324,13 +234,30 @@ function closeModal() {
 
 .meta-info {
   display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  color: #ccc;
+  align-items: center;
+  gap: 12px;
+  margin: 15px 0;
+  color: #fff;
 }
 
-.rating {
+.star-icon {
   color: #ffd700;
+  margin-right: 4px;
+}
+
+.rating,
+.year,
+.runtime {
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+}
+
+.rating::after,
+.year::after {
+  content: '•';
+  margin-left: 12px;
+  opacity: 0.6;
 }
 
 .overview {
@@ -342,16 +269,18 @@ function closeModal() {
 
 .genre-tags {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
+  margin-top: 15px;
 }
 
 .genre-tag {
-  padding: 5px 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
   font-size: 0.9em;
   color: #fff;
+  backdrop-filter: blur(4px);
 }
 
 .trailer-section {
@@ -459,6 +388,130 @@ function closeModal() {
   }
   .grid-container {
     padding: 0 10px;
+  }
+}
+
+/* 뷰 토글 버튼 스타일 */
+.view-toggle {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: flex-end;
+  padding-right: 20px;
+}
+
+.view-toggle button {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-toggle button.active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 리스트 뷰 스타일 */
+.list-view {
+  padding: 0 20px;
+}
+
+.list-item {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 15px;
+  transition: transform 0.2s ease;
+}
+
+.list-item:hover {
+  transform: scale(1.01);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.list-poster {
+  width: 100px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.list-content {
+  flex: 1;
+}
+
+.list-content h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.2em;
+}
+
+.list-meta {
+  display: flex;
+  gap: 15px;
+  color: #999;
+  margin-bottom: 10px;
+}
+
+.list-overview {
+  color: #ccc;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+.list-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+}
+
+.list-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.list-actions .info-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.list-actions .remove-btn {
+  background: rgba(229, 9, 20, 0.8);
+  color: white;
+}
+
+.list-actions button:hover {
+  transform: scale(1.05);
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+  .list-item {
+    flex-direction: column;
+  }
+
+  .list-poster {
+    width: 100%;
+    height: 200px;
+  }
+
+  .list-actions {
+    flex-direction: row;
+    justify-content: flex-end;
   }
 }
 </style>
