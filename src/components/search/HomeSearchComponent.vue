@@ -3,6 +3,7 @@
     <MovieSearch @changeOptions="changeOptions" />
     <MovieInfiniteScroll
       :apiKey="apiKey"
+      :fetchUrl="null"
       :genreCode="genreId"
       :sortingOrder="sortId"
       :voteAverage="voteAverageId"
@@ -15,7 +16,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import MovieSearch from './MovieSearchComponent.vue'
 import MovieInfiniteScroll from '../views/MovieInfiniteScrollComponent.vue'
 import urlService from '@/services/urlService'
@@ -27,10 +28,20 @@ const sortId = ref('popularity.desc')
 const yearId = ref(null)
 const runtimeId = ref(null)
 const languageId = ref(null)
-const certificationId = ref(null)
-const ageFromId = ref(null)
-const ageToId = ref(null)
 const adultId = ref(false)
+
+// URL 생성을 computed로 변경
+const getFilteredMoviesURL = computed(() => {
+  return urlService.getFilteredMoviesURL({
+    genre: genreId.value,
+    rating: voteAverageId.value,
+    language: languageId.value,
+    year: yearId.value,
+    sortBy: sortId.value,
+    runtime: runtimeId.value,
+    adult: adultId.value
+  })
+})
 
 function changeOptions(options) {
   console.log('Before update - Current values:', {
@@ -71,14 +82,6 @@ function changeOptions(options) {
 
   // 언어 설정
   languageId.value = urlService.languageCodes[options.language]
-
-  // 연령 등급 설정
-  certificationId.value = options.certification === '연령 등급 (전체)' ?
-    null : options.certification
-
-  // 최소/최대 연령 설정
-  ageFromId.value = options.ageFrom === '최소 연령' ? null : options.ageFrom
-  ageToId.value = options.ageTo === '최대 연령' ? null : options.ageTo
 
   // 성인물 포함 여부만 설정
   adultId.value = options.adult === '성인물 포함'

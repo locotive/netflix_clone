@@ -16,11 +16,16 @@
         @click="toggleWishlist(movie)"
       >
         <div class="poster-container">
+          <div v-if="!movie.imageLoaded" class="loading-overlay">
+            <div class="loading-spinner"></div>
+          </div>
           <img
             :src="movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '/no-poster.jpg'"
             :alt="movie.title"
             class="movie-poster"
             loading="lazy"
+            @load="movie.imageLoaded = true"
+            :class="{ 'loaded': movie.imageLoaded }"
           />
         </div>
         <div class="movie-info">
@@ -52,12 +57,19 @@ import urlService from '@/services/urlService'
 import { useWishlist } from '@/services/wishlistService'
 
 const props = defineProps({
-  apiKey: String,
+  apiKey: {
+    type: String,
+    required: true
+  },
+  fetchUrl: {
+    type: String,
+    required: true
+  },
   genreCode: String,
   sortingOrder: String,
   voteAverage: Number,
-  year: String,
-  runtime: [String, Object, null],
+  year: [String, Number],
+  runtime: String,
   language: String,
   adult: Boolean
 })
@@ -78,35 +90,12 @@ function formatDate(dateStr) {
   })
 }
 
-watch(
-  () => ({
-    genreCode: props.genreCode,
-    sortingOrder: props.sortingOrder,
-    voteAverage: props.voteAverage,
-    year: props.year,
-    runtime: props.runtime,
-    language: props.language,
-    adult: props.adult
-  }),
-  async (newVal, oldVal) => {
-    if (JSON.stringify(newVal) !== JSON.stringify(oldVal)) {
-      console.log('Filter changed, resetting and fetching new movies')
-      currentPage.value = 1
-      movies.value = []
-      hasMore.value = true
-      await fetchMovies()
-    }
-  },
-  { deep: true }
-)
-
-async function fetchMovies() {
-  if (isLoading.value || !hasMore.value) return
-
-  try {
-    isLoading.value = true
-    const url = urlService.getFilteredMoviesURL({
-      page: currentPage.value,
+// URL 생성 함수
+const getFinalUrl = (page) => {
+  if (!props.fetchUrl) {
+    // 기본 URL 생성 (검색 페이지용)
+    return urlService.getFilteredMoviesURL({
+      page,
       genre: props.genreCode,
       rating: props.voteAverage,
       language: props.language,
@@ -115,50 +104,84 @@ async function fetchMovies() {
       runtime: props.runtime,
       adult: props.adult
     })
+  }
+  // Popular 페이지용 URL
+  return `${props.fetchUrl}&page=${page}`
+}
 
-    console.log('Final fetch URL:', url)
+// 영화 데이터 로드 함수 수정
+const loadMovies = async () => {
+  if (isLoading.value) return
+
+  try {
+    isLoading.value = true
+    const url = getFinalUrl(currentPage.value)
+    console.log('Loading movies from URL:', url)
+
     const response = await axios.get(url)
 
-    if (response.data.results) {
-      if (response.data.results.length === 0) {
-        hasMore.value = false
+    if (response.data && response.data.results) {
+      const newMovies = response.data.results
+      if (currentPage.value === 1) {
+        movies.value = newMovies
       } else {
-        movies.value = currentPage.value === 1 ?
-          response.data.results :
-          [...movies.value, ...response.data.results]
-        currentPage.value++
+        movies.value = [...movies.value, ...newMovies]
       }
-      console.log(`Fetched ${response.data.results.length} movies`)
+      console.log(`Loaded ${newMovies.length} movies. Total: ${movies.value.length}`)
     }
   } catch (error) {
-    console.error('Error fetching movies:', error)
-    hasMore.value = false
+    console.error('Error loading movies:', error)
   } finally {
     isLoading.value = false
   }
 }
 
+// props가 변경될 때 데이터 리로드
+watch(
+  () => [
+    props.genreCode,
+    props.sortingOrder,
+    props.voteAverage,
+    props.year,
+    props.runtime,
+    props.language,
+    props.adult
+  ],
+  () => {
+    console.log('Search params changed, reloading data...')
+    currentPage.value = 1
+    movies.value = []
+    loadMovies()
+  }
+)
+
 const gridContainer = ref(null)
 const observer = ref(null)
 
-onMounted(() => {
-  fetchMovies()
+// 스크롤 감지 함수 추가
+const handleScroll = () => {
+  const scrollPosition = window.innerHeight + window.scrollY
+  const bottomOfPage = document.documentElement.offsetHeight - 200 // 하단에서 200px 여유
 
-  observer.value = new IntersectionObserver(([entry]) => {
-    if (entry.isIntersecting && !isLoading.value && hasMore.value) {
-      fetchMovies()
-    }
-  })
+  console.log('Scroll Position:', scrollPosition)
+  console.log('Bottom of Page:', bottomOfPage)
 
-  if (gridContainer.value) {
-    observer.value.observe(gridContainer.value)
+  if (scrollPosition >= bottomOfPage && !isLoading.value) {
+    console.log('Loading more movies...')
+    currentPage.value++
+    loadMovies()
   }
+}
+
+// 컴포넌트 마운트 시 스크롤 이벤트 리스너 추가
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll)
+  loadMovies() // 초기 데이터 로드
 })
 
+// 컴포넌트 언마운트 시 이벤트 리스너 제거
 onUnmounted(() => {
-  if (observer.value) {
-    observer.value.disconnect()
-  }
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>
 
@@ -206,12 +229,44 @@ onUnmounted(() => {
 
 .poster-container {
   position: relative;
-  overflow: hidden;
+  width: 200px;
+  aspect-ratio: 2/3;
+  background: #1a1a1a;
 }
 
-.poster-container:hover img {
-  transform: scale(1.1);
-  transition: transform 0.3s ease;
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #1a1a1a;
+  z-index: 1;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left-color: #e50914;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+img {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+img.loaded {
+  opacity: 1;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .wishlist-badge {
