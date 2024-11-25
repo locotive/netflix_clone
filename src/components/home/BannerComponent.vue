@@ -80,6 +80,8 @@ const props = defineProps({
   }
 })
 
+const bannerLoaded = ref(false)
+const modalImageLoaded = ref(false)
 const { toggleWishlist: toggleWishlistService, isInWishlist } = useWishlist()
 const selectedMovie = ref(null)
 
@@ -90,16 +92,26 @@ const bannerStyle = computed(() => ({
   position: 'relative'
 }))
 
+function onBannerImageLoad() {
+  bannerLoaded.value = true
+}
+
+const bannerImage = new Image()
+bannerImage.onload = onBannerImageLoad
+bannerImage.src = `https://image.tmdb.org/t/p/original${props.movie?.backdrop_path}`
+
 function handleWishlistToggle(movie) {
   toggleWishlistService(movie)
 }
 
 function showMovieDetails() {
   selectedMovie.value = props.movie
+  modalImageLoaded.value = false
 }
 
 function closeModal() {
   selectedMovie.value = null
+  modalImageLoaded.value = false
 }
 </script>
 
