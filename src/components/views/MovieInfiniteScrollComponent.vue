@@ -1,115 +1,135 @@
 <template>
   <div class="movie-grid" ref="gridContainer">
-    <div v-if="movies.length === 0">영화를 불러오는 중...</div>
-    <div v-else class="list-view">
-      <div v-for="movie in movies" :key="movie.id" class="movie-banner">
-        <div
-          class="banner-image"
-          :style="{ backgroundImage: `url(${getBackdropUrl(movie.backdrop_path)})` }"
-        >
-          <div class="banner-content">
-            <div class="movie-info">
-              <h2>{{ movie.title }}</h2>
-              <p>{{ movie.overview }}</p>
-              <div class="movie-meta">
-                <span class="rating">평점: {{ movie.vote_average.toFixed(1) }}</span>
-                <span class="release-date">개봉일: {{ movie.release_date }}</span>
-              </div>
+    <div v-if="isLoading && movies.length === 0" class="loading">
+      <div class="loading-spinner"></div>
+      <p>영화를 불러오는 중...</p>
+    </div>
+    <div v-else-if="!isLoading && movies.length === 0" class="no-results">
+      검색 결과가 없습니다. 필터 조건을 변경해보세요.
+    </div>
+    <div v-else class="movie-list">
+      <div
+        v-for="movie in movies"
+        :key="movie.id"
+        class="movie-item"
+        :class="{ 'in-wishlist': isInWishlist(movie.id) }"
+        @click="toggleWishlist(movie)"
+      >
+        <div class="poster-container">
+          <img
+            :src="movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '/no-poster.jpg'"
+            :alt="movie.title"
+            class="movie-poster"
+            loading="lazy"
+          />
+        </div>
+        <div class="movie-info">
+          <h3>{{ movie.title }}</h3>
+          <div class="movie-details">
+            <div class="meta-info">
+              <p class="rating">⭐ {{ movie.vote_average.toFixed(1) }}</p>
+              <p class="release-date">{{ formatDate(movie.release_date) }}</p>
             </div>
-            <div class="action-buttons">
-              <button class="play-btn">재생</button>
-              <button class="wishlist-btn" @click="toggleWishlist(movie)">
-                {{ isInWishlist(movie.id) ? '찜해제' : '찜하기' }}
-              </button>
-            </div>
+            <p class="overview">{{ movie.overview || '줄거리 없음' }}</p>
           </div>
+        </div>
+        <div v-if="isInWishlist(movie.id)" class="wishlist-badge">
+          찜됨
         </div>
       </div>
     </div>
-    <div ref="loadingTrigger"></div>
+    <div v-if="isLoading && movies.length > 0" class="loading-more">
+      <div class="loading-spinner"></div>
+      <p>더 많은 영화를 불러오는 중...</p>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
+import urlService from '@/services/urlService'
 import { useWishlist } from '@/services/wishlistService'
 
 const props = defineProps({
-  genreCode: String,
   apiKey: String,
+  genreCode: String,
   sortingOrder: String,
   voteAverage: Number,
   year: String,
-  adult: Boolean,
-  runtime: Object,
+  runtime: [String, Object, null],
   language: String,
-  fetchUrl: String,
+  adult: Boolean
 })
 
 const movies = ref([])
 const currentPage = ref(1)
 const isLoading = ref(false)
 const hasMore = ref(true)
-const gridContainer = ref(null)
-const loadingTrigger = ref(null)
-let observer = null
 
-const { toggleWishlist, isInWishlist } = useWishlist()
+const { isInWishlist, toggleWishlist } = useWishlist()
 
-function getBackdropUrl(path) {
-  return path ? `https://image.tmdb.org/t/p/w1280${path}` : '/placeholder-backdrop.jpg'
+function formatDate(dateStr) {
+  if (!dateStr) return '개봉일 미정'
+  return new Date(dateStr).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 }
+
+watch(
+  () => ({
+    genreCode: props.genreCode,
+    sortingOrder: props.sortingOrder,
+    voteAverage: props.voteAverage,
+    year: props.year,
+    runtime: props.runtime,
+    language: props.language,
+    adult: props.adult
+  }),
+  async (newVal, oldVal) => {
+    if (JSON.stringify(newVal) !== JSON.stringify(oldVal)) {
+      console.log('Filter changed, resetting and fetching new movies')
+      currentPage.value = 1
+      movies.value = []
+      hasMore.value = true
+      await fetchMovies()
+    }
+  },
+  { deep: true }
+)
 
 async function fetchMovies() {
   if (isLoading.value || !hasMore.value) return
 
-  isLoading.value = true
   try {
-    let url
-    // fetchUrl이 제공된 경우 (Popular 리스트용)
-    if (props.fetchUrl) {
-      url = `${props.fetchUrl}&page=${currentPage.value}`
-      console.log('Using provided fetchUrl:', url)
-    } else {
-      // 검색 조건에 따른 URL 구성 (Search 컴포넌트용)
-      url = `https://api.themoviedb.org/3/discover/movie?api_key=${props.apiKey}&language=ko-KR&page=${currentPage.value}`
-
-      if (props.genreCode && props.genreCode !== '0') {
-        url += `&with_genres=${props.genreCode}`
-      }
-
-      if (props.voteAverage > 0) {
-        if (props.voteAverage === -2) {
-          url += `&vote_average.lte=4`
-        } else {
-          url += `&vote_average.gte=${props.voteAverage}`
-        }
-      }
-
-      if (props.sortingOrder && props.sortingOrder !== 'all') {
-        url += `&sort_by=${props.sortingOrder}`
-      }
-
-      // ... other filters ...
-    }
+    isLoading.value = true
+    const url = urlService.getFilteredMoviesURL({
+      page: currentPage.value,
+      genre: props.genreCode,
+      rating: props.voteAverage,
+      language: props.language,
+      year: props.year,
+      sortBy: props.sortingOrder,
+      runtime: props.runtime,
+      adult: props.adult
+    })
 
     console.log('Final fetch URL:', url)
     const response = await axios.get(url)
-    const newMovies = response.data.results || []
 
-    if (newMovies.length > 0) {
-      if (currentPage.value === 1) {
-        movies.value = newMovies
+    if (response.data.results) {
+      if (response.data.results.length === 0) {
+        hasMore.value = false
       } else {
-        movies.value = [...movies.value, ...newMovies]
+        movies.value = currentPage.value === 1 ?
+          response.data.results :
+          [...movies.value, ...response.data.results]
+        currentPage.value++
       }
-      currentPage.value++
-    } else {
-      hasMore.value = false
+      console.log(`Fetched ${response.data.results.length} movies`)
     }
-
-    console.log(`Fetched ${newMovies.length} movies`)
   } catch (error) {
     console.error('Error fetching movies:', error)
     hasMore.value = false
@@ -118,157 +138,165 @@ async function fetchMovies() {
   }
 }
 
-function setupIntersectionObserver() {
-  observer = new IntersectionObserver(
-    (entries) => {
-      if (entries[0].isIntersecting && !isLoading.value && hasMore.value) {
-        fetchMovies()
-      }
-    },
-    { rootMargin: '100px', threshold: 0.1 },
-  )
-  if (loadingTrigger.value) {
-    observer.observe(loadingTrigger.value)
-  }
-}
+const gridContainer = ref(null)
+const observer = ref(null)
 
 onMounted(() => {
-  console.log('Component mounted, fetching movies...')
-  movies.value = []
-  currentPage.value = 1
-  hasMore.value = true
   fetchMovies()
-  setupIntersectionObserver()
+
+  observer.value = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting && !isLoading.value && hasMore.value) {
+      fetchMovies()
+    }
+  })
+
+  if (gridContainer.value) {
+    observer.value.observe(gridContainer.value)
+  }
 })
 
 onUnmounted(() => {
-  if (observer) observer.disconnect()
+  if (observer.value) {
+    observer.value.disconnect()
+  }
 })
-
-// props 변경 감지
-watch(
-  [
-    () => props.fetchUrl,
-    () => props.genreCode,
-    () => props.sortingOrder,
-    () => props.voteAverage,
-    () => props.year,
-    () => props.adult,
-    () => props.runtime,
-    () => props.language,
-  ],
-  () => {
-    console.log('Props changed, resetting and fetching new movies')
-    movies.value = []
-    currentPage.value = 1
-    hasMore.value = true
-    fetchMovies()
-  },
-  { deep: true },
-)
 </script>
 
 <style scoped>
 .movie-grid {
-  width: 100%;
-  padding: 20px;
-}
-
-.list-view {
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding: 20px;
 }
 
-.movie-banner {
-  width: 100%;
-  height: 40vh;
-  border-radius: 10px;
-  overflow: hidden;
-  position: relative;
-  transition: transform 0.3s ease;
+.movie-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.movie-banner:hover {
+.movie-item {
+  display: flex;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  position: relative;
+  cursor: pointer;
+  height: 300px;
+}
+
+.movie-item:hover {
   transform: scale(1.02);
 }
 
-.banner-image {
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
+.poster-container {
   position: relative;
+  overflow: hidden;
 }
 
-.banner-content {
+.poster-container:hover img {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+}
+
+.wishlist-badge {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 20px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+  top: 16px;
+  right: 16px;
+  background: rgba(229, 9, 20, 0.8);
   color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  z-index: 3;
+}
+
+.movie-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.movie-item:hover .movie-poster {
+  transform: scale(1.05);
 }
 
 .movie-info {
   flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
 }
 
-.movie-info h2 {
-  font-size: 24px;
-  margin-bottom: 10px;
+.movie-info h3 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: white;
+  margin-bottom: 16px;
+  font-weight: 600;
 }
 
-.movie-info p {
-  font-size: 14px;
-  margin-bottom: 10px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.movie-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.movie-meta {
+.meta-info {
   display: flex;
   gap: 20px;
-  font-size: 14px;
+  align-items: center;
 }
 
-.action-buttons {
-  display: flex;
-  gap: 10px;
+.rating {
+  color: #ffd700;
+  font-size: 1.2rem;
+  margin: 0;
 }
 
-.play-btn,
-.wishlist-btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+.release-date {
+  color: #aaa;
+  font-size: 1.1rem;
+  margin: 0;
 }
 
-.play-btn {
-  background-color: #e50914;
+.overview {
+  color: #ddd;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left-color: #e50914;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading, .no-results, .loading-more {
+  text-align: center;
+  padding: 20px;
   color: white;
-}
-
-.wishlist-btn {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.play-btn:hover {
-  background-color: #f40612;
-}
-
-.wishlist-btn:hover {
-  background-color: rgba(255, 255, 255, 0.3);
 }
 </style>
