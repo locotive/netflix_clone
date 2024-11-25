@@ -36,6 +36,11 @@
               <p class="release-date">{{ formatDate(movie.release_date) }}</p>
             </div>
             <p class="overview">{{ movie.overview || '줄거리 없음' }}</p>
+            <div class="list-actions">
+              <button class="info-btn" @click.stop="handleInfoClick($event, movie)">
+                <font-awesome-icon :icon="faInfoCircle" /> 상세정보
+              </button>
+            </div>
           </div>
         </div>
         <div v-if="isInWishlist(movie.id)" class="wishlist-badge">
@@ -47,6 +52,52 @@
       <div class="loading-spinner"></div>
       <p>더 많은 영화를 불러오는 중...</p>
     </div>
+    <div v-if="selectedMovie" class="movie-modal" @click.self="closeModal">
+      <div class="modal-content">
+        <div
+          class="modal-backdrop"
+          :style="{
+            backgroundImage: `url(https://image.tmdb.org/t/p/original${selectedMovie.backdrop_path})`,
+          }"
+        >
+          <div class="backdrop-overlay"></div>
+        </div>
+
+        <button class="close-btn" @click="closeModal">
+          <font-awesome-icon :icon="faTimes" />
+        </button>
+
+        <div class="modal-body">
+          <div class="modal-main-info">
+            <img
+              :src="`https://image.tmdb.org/t/p/w500${selectedMovie.poster_path}`"
+              :alt="selectedMovie.title"
+              class="modal-poster"
+              @error="handleImageError"
+              @load="handleImageLoad"
+            />
+            <div class="modal-text-content">
+              <h2 class="movie-title">{{ selectedMovie.title }}</h2>
+              <div class="meta-info">
+                <span class="rating">
+                  <font-awesome-icon :icon="faStar" /> {{ selectedMovie.vote_average?.toFixed(1) }}
+                </span>
+                <span class="year">{{ selectedMovie.release_date?.split('-')[0] }}</span>
+                <span class="runtime" v-if="selectedMovie.runtime">
+                  {{ selectedMovie.runtime }}분
+                </span>
+              </div>
+              <p class="overview">{{ selectedMovie.overview }}</p>
+              <div class="genre-tags" v-if="selectedMovie.genres">
+                <span v-for="genre in selectedMovie.genres" :key="genre.id" class="genre-tag">
+                  {{ genre.name }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -55,6 +106,7 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import urlService from '@/services/urlService'
 import { useWishlist } from '@/services/wishlistService'
+import { faHeart, faInfoCircle, faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
 
 const props = defineProps({
   apiKey: {
@@ -183,6 +235,44 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
 })
+
+const selectedMovie = ref(null)
+
+async function showMovieDetails(movie) {
+  try {
+    console.log('Fetching movie details for:', movie.id);
+    const response = await axios.get(
+      `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=ko-KR`
+    );
+    console.log('Movie details response:', response.data);
+    selectedMovie.value = response.data;
+  } catch (error) {
+    console.error('Error fetching movie details:', error);
+  }
+}
+
+function closeModal() {
+  selectedMovie.value = null
+}
+
+function handleInfoClick(event, movie) {
+  console.log('Info button clicked for movie:', movie.title);
+  event.stopPropagation();
+  showMovieDetails(movie);
+}
+
+function getImageUrl(path) {
+  return `https://image.tmdb.org/t/p/w500${path}`
+}
+
+// 이미지 로드 관련 디버깅
+function handleImageError(e) {
+  console.error('Image failed to load:', e.target.src);
+}
+
+function handleImageLoad(e) {
+  console.log('Image loaded successfully:', e.target.src);
+}
 </script>
 
 <style scoped>
@@ -377,6 +467,199 @@ img.loaded {
 
   .movie-info {
     padding: 15px;
+  }
+}
+
+.list-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.list-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.list-actions .info-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.list-actions button:hover {
+  transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+  .list-actions {
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+}
+
+/* 모달 관련 스타일 추가 */
+.movie-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 95%;
+  max-width: 1400px;
+  max-height: 95vh;
+  background: #141414;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  animation: modalFadeIn 0.3s ease;
+}
+
+.modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.backdrop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(20, 20, 20, 0.5), #141414);
+}
+
+.close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  color: white;
+  font-size: 1.5em;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+.close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.modal-body {
+  position: relative;
+  z-index: 1;
+  padding: 30px;
+  margin-top: 120px;
+}
+
+.modal-main-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.modal-poster {
+  width: 300px;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  opacity: 1;
+}
+
+.modal-text-content {
+  color: white;
+}
+
+.modal-text-content h2.movie-title {
+  font-size: 2.5em;
+  margin: 0 0 15px 0;
+  text-align: left;
+}
+
+.meta-info {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  color: #999;
+}
+
+.overview {
+  font-size: 1.1em;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  color: #ccc;
+}
+
+.genre-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.genre-tag {
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  font-size: 0.9em;
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-main-info {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-poster {
+    width: 200px;
+    margin: 0 auto;
+  }
+
+  .modal-text-content h2.movie-title {
+    font-size: 1.8em;
+  }
+
+  .modal-body {
+    margin-top: 60px;
+    padding: 20px;
   }
 }
 </style>
