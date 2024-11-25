@@ -468,7 +468,8 @@ function closeModal() {
 .view-toggle {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
+  margin: 20px 0 30px;
+  padding: 0 20px;
 }
 
 .view-toggle button {
@@ -501,6 +502,7 @@ function closeModal() {
 /* 리스트 뷰 스타일 */
 .list-view {
   padding: 0 20px;
+  margin-top: 20px;
 }
 
 .list-item {
@@ -680,5 +682,10 @@ function closeModal() {
   .modal-text-content h2.movie-title {
     font-size: 1.8em;
   }
+}
+
+/* 그리드 뷰 스타일 수정 */
+.movie-grid {
+  margin-top: 20px;
 }
 </style>
