@@ -14,15 +14,16 @@
 
     <template v-else>
       <!-- 그리드 뷰 -->
-      <div v-if="currentView === 'grid'" class="grid-view">
-        <div class="movie-row">
-          <div v-for="movie in wishlist" :key="movie.id" class="movie-card">
-            <div class="poster-container" @click="toggleWishlist(movie)">
+      <div v-if="currentView === 'grid'" class="movie-grid">
+        <div class="grid-container">
+          <div class="movie-row">
+            <div v-for="movie in wishlist" :key="movie.id" class="movie-card">
               <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
-              <div class="overlay">
-                <div class="movie-title">{{ movie.title }}</div>
-                <button class="info-btn" @click.stop="showMovieDetails(movie)">
-                  <font-awesome-icon :icon="faInfoCircle" />
+              <div class="movie-title">{{ movie.title }}</div>
+              <div class="grid-actions">
+                <button class="grid-info-btn" @click="showMovieDetails(movie)">
+                  <font-awesome-icon :icon="faCircleInfo" />
+                  <span>상세정보</span>
                 </button>
               </div>
             </div>
@@ -54,15 +55,69 @@
         </div>
       </div>
     </template>
+
+    <!-- 모달 -->
+    <div v-if="selectedMovie" class="movie-modal" @click.self="closeModal">
+      <div class="modal-content">
+        <div
+          class="modal-backdrop"
+          :style="{
+            backgroundImage: `url(https://image.tmdb.org/t/p/original${selectedMovie.backdrop_path})`,
+          }"
+        >
+          <div class="backdrop-overlay"></div>
+        </div>
+
+        <button class="close-btn" @click="closeModal">
+          <font-awesome-icon :icon="faTimes" />
+        </button>
+
+        <div class="modal-body">
+          <div class="modal-main-info">
+            <img
+              :src="getImageUrl(selectedMovie.poster_path)"
+              :alt="selectedMovie.title"
+              class="modal-poster"
+            />
+            <div class="modal-text-content">
+              <h2 class="movie-title">{{ selectedMovie.title }}</h2>
+              <div class="meta-info">
+                <span class="rating">
+                  <font-awesome-icon :icon="faStar" /> {{ selectedMovie.vote_average?.toFixed(1) }}
+                </span>
+                <span class="year">{{ selectedMovie.release_date?.split('-')[0] }}</span>
+                <span class="runtime" v-if="selectedMovie.runtime">
+                  {{ selectedMovie.runtime }}분
+                </span>
+              </div>
+              <p class="overview">{{ selectedMovie.overview }}</p>
+              <div class="genre-tags" v-if="selectedMovie.genres">
+                <span v-for="genre in selectedMovie.genres" :key="genre.id" class="genre-tag">
+                  {{ genre.name }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { useWishlist } from '@/services/wishlistService'
-import { faHeart, faInfoCircle, faTh, faBars } from '@fortawesome/free-solid-svg-icons'
+import {
+  faHeart,
+  faCircleInfo,
+  faTh,
+  faBars,
+  faTimes,
+  faStar,
+} from '@fortawesome/free-solid-svg-icons'
 
 const currentView = ref('grid')
+const selectedMovie = ref(null)
 const { wishlist, toggleWishlist } = useWishlist()
 
 function getImageUrl(path) {
@@ -70,8 +125,11 @@ function getImageUrl(path) {
 }
 
 function showMovieDetails(movie) {
-  // 상세 정보 모달 표시 로직
-  console.log('Show details for:', movie.title)
+  selectedMovie.value = movie
+}
+
+function closeModal() {
+  selectedMovie.value = null
 }
 </script>
 
@@ -153,118 +211,111 @@ function showMovieDetails(movie) {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(8px);
 }
 
 .modal-content {
-  width: 90%;
-  max-width: 1200px;
-  max-height: 90vh;
+  width: 95%;
+  max-width: 1400px;
+  max-height: 95vh;
   background: #141414;
   border-radius: 12px;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
-  animation: modalFadeIn 0.3s ease-out;
+  animation: modalFadeIn 0.3s ease;
 }
 
 .modal-backdrop {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  height: 400px;
+  width: 100%;
+  height: 100%;
   background-size: cover;
   background-position: center;
+  z-index: 0;
 }
 
 .backdrop-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(20, 20, 20, 0.2) 0%,
-    rgba(20, 20, 20, 0.8) 50%,
-    #141414 100%
-  );
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(20, 20, 20, 0.5), #141414);
+}
+
+.close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .modal-body {
   position: relative;
+  z-index: 1;
   padding: 30px;
-  overflow-y: auto;
-  max-height: 90vh;
 }
 
 .modal-main-info {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   gap: 30px;
-  margin-top: 250px;
+  margin-top: 150px;
 }
 
 .modal-poster {
-  width: 250px;
+  width: 300px;
   border-radius: 8px;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .modal-text-content {
-  flex: 1;
+  color: white;
 }
 
 .movie-title {
-  font-size: 12px;
-  color: white;
+  margin-top: 5px;
   text-align: center;
+  font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding: 0 8px;
   line-height: 1.2;
+  color: #fff;
 }
 
 .meta-info {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 15px 0;
-  color: #fff;
-}
-
-.star-icon {
-  color: #ffd700;
-  margin-right: 4px;
-}
-
-.rating,
-.year,
-.runtime {
-  font-size: 1.1em;
-  display: flex;
-  align-items: center;
-}
-
-.rating::after,
-.year::after {
-  content: '•';
-  margin-left: 12px;
-  opacity: 0.6;
+  gap: 15px;
+  margin-bottom: 20px;
+  color: #999;
 }
 
 .overview {
   font-size: 1.1em;
   line-height: 1.6;
-  color: #ccc;
   margin-bottom: 20px;
+  color: #ccc;
 }
 
 .genre-tags {
@@ -283,39 +334,6 @@ function showMovieDetails(movie) {
   backdrop-filter: blur(4px);
 }
 
-.trailer-section {
-  margin-top: 40px;
-}
-
-.trailer-section h3 {
-  color: white;
-  margin-bottom: 15px;
-}
-
-.close-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  color: white;
-  font-size: 1.5em;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  cursor: pointer;
-  z-index: 2;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.1);
-}
-
 @keyframes modalFadeIn {
   from {
     opacity: 0;
@@ -329,8 +347,8 @@ function showMovieDetails(movie) {
 
 @media (max-width: 768px) {
   .modal-main-info {
-    flex-direction: column;
-    margin-top: 150px;
+    grid-template-columns: 1fr;
+    margin-top: 100px;
   }
 
   .modal-poster {
@@ -513,5 +531,42 @@ function showMovieDetails(movie) {
     flex-direction: row;
     justify-content: flex-end;
   }
+}
+
+/* 그리드 뷰 버튼 스타일 수정 */
+.grid-actions {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.grid-info-btn {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: black;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.2s ease;
+}
+
+.grid-info-btn:hover {
+  transform: scale(1.05);
+  background-color: white;
+}
+
+.movie-card:hover .grid-actions {
+  opacity: 1;
+}
+
+/* 호버 시에도 제목 크기 유지 */
+.movie-card:hover .movie-title {
+  font-size: 14px;
 }
 </style>
