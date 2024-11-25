@@ -1,26 +1,106 @@
 <template>
-  <div v-if="movie" class="banner" :style="{ backgroundImage: `url(${backdropUrl})` }">
+  <div v-if="movie" class="banner" :style="bannerStyle">
     <div class="banner-content">
       <h1>{{ movie.title }}</h1>
       <p>{{ movie.overview }}</p>
       <div class="button-group">
-        <button class="play-btn title-btn">재생</button>
-        <button class="info-btn title-btn">상세 정보</button>
+        <button class="play-btn title-btn" @click="handleWishlistToggle(movie)">
+          <font-awesome-icon :icon="faHeart" :class="{ 'active': isInWishlist(movie.id) }" />
+          {{ isInWishlist(movie.id) ? '찜 해제' : '찜하기' }}
+        </button>
+        <button class="info-btn title-btn" @click="showMovieDetails">상세 정보</button>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="selectedMovie" class="movie-modal" @click.self="closeModal">
+    <div class="modal-content">
+      <div
+        class="modal-backdrop"
+        :style="{
+          backgroundImage: `url(https://image.tmdb.org/t/p/original${selectedMovie.backdrop_path})`,
+        }"
+      >
+        <div class="backdrop-overlay"></div>
+      </div>
+
+      <button class="close-btn" @click="closeModal">
+        <font-awesome-icon :icon="faTimes" />
+      </button>
+
+      <div class="modal-body">
+        <div class="modal-main-info">
+          <img
+            :src="`https://image.tmdb.org/t/p/original${selectedMovie.poster_path}`"
+            :alt="selectedMovie.title"
+            class="modal-poster"
+          />
+          <div class="modal-text-content">
+            <h2 class="movie-title">{{ selectedMovie.title }}</h2>
+            <div class="meta-info">
+              <span class="rating">
+                <font-awesome-icon :icon="faStar" /> {{ selectedMovie.vote_average?.toFixed(1) }}
+              </span>
+              <span class="year">{{ selectedMovie.release_date?.split('-')[0] }}</span>
+              <span class="runtime" v-if="selectedMovie.runtime">
+                {{ selectedMovie.runtime }}분
+              </span>
+            </div>
+            <p class="overview">{{ selectedMovie.overview }}</p>
+            <div class="genre-tags" v-if="selectedMovie.genres">
+              <span v-for="genre in selectedMovie.genres" :key="genre.id" class="genre-tag">
+                {{ genre.name }}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { faHeart, faInfoCircle, faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
+import { useWishlist } from '@/services/wishlistService'
+import { useToast } from "vue-toastification"
 
 const props = defineProps({
-  movie: Object,
+  movie: {
+    type: Object,
+    required: true
+  }
 })
 
-const backdropUrl = computed(() => {
-  return props.movie ? `https://image.tmdb.org/t/p/original${props.movie.backdrop_path}` : ''
-})
+const toast = useToast()
+const { toggleWishlist: toggleWishlistService, isInWishlist } = useWishlist()
+const selectedMovie = ref(null)
+
+const bannerStyle = computed(() => ({
+  backgroundSize: 'cover',
+  backgroundImage: `url("https://image.tmdb.org/t/p/original${props.movie?.backdrop_path}")`,
+  backgroundPosition: 'center center',
+  position: 'relative'
+}))
+
+function handleWishlistToggle(movie) {
+  const wasInWishlist = isInWishlist(movie.id)
+  toggleWishlistService(movie)
+
+  if (!wasInWishlist) {
+    toast.success(`'${movie.title}' 위시리스트에 추가되었습니다!`)
+  } else {
+    toast.info(`'${movie.title}' 위시리스트에서 제거되었습니다.`)
+  }
+}
+
+function showMovieDetails() {
+  selectedMovie.value = props.movie
+}
+
+function closeModal() {
+  selectedMovie.value = null
+}
 </script>
 
 <style scoped>
@@ -140,5 +220,178 @@ const backdropUrl = computed(() => {
     padding: 8px 18px;
     font-size: 0.8rem;
   }
+}
+
+/* MovieWishlistComponent의 모달 스타일 복사 */
+.movie-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 95%;
+  max-width: 1400px;
+  max-height: 95vh;
+  background: #141414;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  animation: modalFadeIn 0.3s ease;
+}
+
+.modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.backdrop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(20, 20, 20, 0.5), #141414);
+}
+
+.close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-body {
+  position: relative;
+  z-index: 1;
+  padding: 30px;
+}
+
+.modal-main-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 30px;
+  margin-top: 150px;
+}
+
+.modal-poster {
+  width: 300px;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.modal-text-content {
+  color: white;
+}
+
+.modal-text-content h2.movie-title {
+  font-size: 2.5em;
+  margin: 0 0 15px 0;
+  padding: 0;
+  text-align: left;
+  white-space: normal;
+  line-height: 1.2;
+  color: white;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.meta-info {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  color: #999;
+}
+
+.overview {
+  font-size: 1.1em;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  color: #ccc;
+}
+
+.genre-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.genre-tag {
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  font-size: 0.9em;
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-main-info {
+    grid-template-columns: 1fr;
+    margin-top: 100px;
+  }
+
+  .modal-poster {
+    width: 200px;
+    margin: 0 auto;
+  }
+
+  .modal-text-content h2.movie-title {
+    font-size: 1.8em;
+  }
+}
+
+/* 기존 스타일 유지하고 찜하기 버튼 스타일 추가 */
+.banner-button.wishlist {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #1a1a1a;
+}
+
+.banner-button.wishlist:hover {
+  background-color: rgba(255, 255, 255, 1);
+}
+
+.banner-button.wishlist .active {
+  color: #e50914;
+}
+
+.banner-button.wishlist:hover .active {
+  color: #ff0f1f;
 }
 </style>
