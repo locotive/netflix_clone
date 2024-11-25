@@ -1,5 +1,8 @@
 <template>
   <div class="movie-grid" ref="gridContainer">
+    <div v-if="isLoading && movies.length === 0" class="loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
     <div :class="['grid-container', currentView]">
       <div
         v-for="(movieGroup, i) in visibleMovieGroups"
@@ -110,23 +113,18 @@ function stopTooltipUpdater() {
   }
 }
 
+const isLoading = ref(false)
+
 // Fetch movies
 async function fetchMovies() {
   try {
-    const totalMoviesNeeded = 120
-    const numberOfPages = Math.ceil(totalMoviesNeeded / 20)
-    let allMovies = []
-
-    for (let page = 1; page <= numberOfPages; page++) {
-      const response = await axios.get(props.fetchUrl, {
-        params: { page, per_page: moviesPerPage.value },
-      })
-      allMovies = [...allMovies, ...response.data.results]
-    }
-
-    movies.value = allMovies.slice(0, totalMoviesNeeded)
+    isLoading.value = true
+    const response = await axios.get(props.fetchUrl)
+    movies.value = response.data.results
   } catch (error) {
     console.error('Error fetching movies:', error)
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -208,6 +206,38 @@ onUnmounted(() => {
   box-shadow: 0 0 5px rgba(229, 9, 20, 0.7);
 }
 
+.movie-card.in-wishlist::after {
+  content: '찜됨';
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #e50914;  /* Netflix 레드 컬러 */
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  z-index: 3;
+  transition: all 0.3s ease;
+  animation: popIn 0.3s ease;
+}
+
+.movie-card:hover.in-wishlist::after {
+  transform: scale(1.1);
+  background: #ff0f1f;  /* 좀 더 밝은 레드 */
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .movie-grid {
   width: 100%;
   height: calc(100vh - 200px);
@@ -238,10 +268,11 @@ onUnmounted(() => {
 }
 
 .movie-card {
+  position: relative;
   width: calc(16.666% - 25px);
   margin: 0;
   transition: transform 0.3s;
-  position: relative;
+  cursor: pointer;
 }
 
 .grid-container.list .movie-card {
@@ -252,29 +283,29 @@ onUnmounted(() => {
 }
 
 .movie-card:hover {
-  transform: scale(1.1);
+  transform: scale(1.05);
+  z-index: 2;
 }
 
-.movie-card img {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 27/40;
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-.grid-container.list .movie-card img {
-  width: 100px;
-  margin-right: 20px;
+.movie-card:hover img {
+  transform: none;
 }
 
 .movie-title {
-  margin-top: 5px;
+  margin-top: 8px;
   text-align: center;
   font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding: 0 8px;
+  line-height: 1.2;
+  color: #fff;
+  transition: color 0.3s ease;
+}
+
+.movie-card:hover .movie-title {
+  color: #535bf2;
 }
 
 .grid-container.list .movie-title {
@@ -302,5 +333,48 @@ onUnmounted(() => {
 .pagination button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left-color: #e50914;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.movie-card.in-wishlist {
+  position: relative;
+}
+
+.movie-card.in-wishlist::after {
+  content: '찜됨';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(229, 9, 20, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  z-index: 2;
 }
 </style>
