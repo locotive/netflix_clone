@@ -1,176 +1,274 @@
 <template>
-  <div class="movie-grid" v-if="movies && movies.length > 0">
-    <div v-for="movie in movies" :key="movie.id" class="movie-card">
-      <img
-        :src="
-          movie.poster_path
-            ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-            : '/no-poster.jpg'
-        "
-        :alt="movie.title"
-        class="movie-poster"
-      />
-      <div class="movie-info">
-        <h3>{{ movie.title }}</h3>
-        <p>평점: {{ movie.vote_average.toFixed(1) }}</p>
-        <p>개봉일: {{ formatDate(movie.release_date) }}</p>
+  <div class="movie-grid" ref="gridContainer">
+    <div v-if="movies.length === 0">영화를 불러오는 중...</div>
+    <div v-else class="list-view">
+      <div v-for="movie in movies" :key="movie.id" class="movie-banner">
+        <div
+          class="banner-image"
+          :style="{ backgroundImage: `url(${getBackdropUrl(movie.backdrop_path)})` }"
+        >
+          <div class="banner-content">
+            <div class="movie-info">
+              <h2>{{ movie.title }}</h2>
+              <p>{{ movie.overview }}</p>
+              <div class="movie-meta">
+                <span class="rating">평점: {{ movie.vote_average.toFixed(1) }}</span>
+                <span class="release-date">개봉일: {{ movie.release_date }}</span>
+              </div>
+            </div>
+            <div class="action-buttons">
+              <button class="play-btn">재생</button>
+              <button class="wishlist-btn" @click="toggleWishlist(movie)">
+                {{ isInWishlist(movie.id) ? '찜해제' : '찜하기' }}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+    <div ref="loadingTrigger"></div>
   </div>
-  <div v-else-if="isLoading" class="loading">영화를 불러오는 중...</div>
-  <div v-else class="no-results">검색 결과가 없습니다.</div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
+import { useWishlist } from '@/services/wishlistService'
 
 const props = defineProps({
-  apiKey: {
-    type: String,
-    required: true,
-  },
-  genreCode: {
-    type: String,
-    required: true,
-  },
-  sortingOrder: {
-    type: String,
-    default: 'all',
-  },
-  voteAverage: {
-    type: Number,
-    default: -1,
-  },
+  genreCode: String,
+  apiKey: String,
+  sortingOrder: String,
+  voteAverage: Number,
+  year: String,
+  adult: Boolean,
+  runtime: Object,
+  language: String,
+  fetchUrl: String,
 })
 
 const movies = ref([])
 const currentPage = ref(1)
 const isLoading = ref(false)
 const hasMore = ref(true)
+const gridContainer = ref(null)
+const loadingTrigger = ref(null)
+let observer = null
 
-// watch 수정
-watch(
-  () => [props.genreCode, props.sortingOrder, props.voteAverage],
-  (newValues) => {
-    console.log('필터 변경 감지됨:', {
-      genre: newValues[0],
-      sort: newValues[1],
-      vote: newValues[2],
-    })
+const { toggleWishlist, isInWishlist } = useWishlist()
 
-    // 필터가 변경되면 데이터 초기화 후 새로 불러오기
-    movies.value = []
-    currentPage.value = 1
-    hasMore.value = true
-    fetchMovies()
-  },
-  { immediate: true },
-)
+function getBackdropUrl(path) {
+  return path ? `https://image.tmdb.org/t/p/w1280${path}` : '/placeholder-backdrop.jpg'
+}
 
 async function fetchMovies() {
   if (isLoading.value || !hasMore.value) return
 
   isLoading.value = true
   try {
-    const params = new URLSearchParams({
-      api_key: props.apiKey,
-      language: 'ko-KR',
-      page: currentPage.value.toString(),
-      sort_by: 'popularity.desc',
-    })
+    let url
+    // fetchUrl이 제공된 경우 (Popular 리스트용)
+    if (props.fetchUrl) {
+      url = `${props.fetchUrl}&page=${currentPage.value}`
+      console.log('Using provided fetchUrl:', url)
+    } else {
+      // 검색 조건에 따른 URL 구성 (Search 컴포넌트용)
+      url = `https://api.themoviedb.org/3/discover/movie?api_key=${props.apiKey}&language=ko-KR&page=${currentPage.value}`
 
-    // 장르 필터
-    if (props.genreCode && props.genreCode !== '28') {
-      params.append('with_genres', props.genreCode)
+      if (props.genreCode && props.genreCode !== '0') {
+        url += `&with_genres=${props.genreCode}`
+      }
+
+      if (props.voteAverage > 0) {
+        if (props.voteAverage === -2) {
+          url += `&vote_average.lte=4`
+        } else {
+          url += `&vote_average.gte=${props.voteAverage}`
+        }
+      }
+
+      if (props.sortingOrder && props.sortingOrder !== 'all') {
+        url += `&sort_by=${props.sortingOrder}`
+      }
+
+      // ... other filters ...
     }
 
-    // 언어 필터
-    if (props.sortingOrder && props.sortingOrder !== 'all') {
-      params.append('with_original_language', props.sortingOrder)
-    }
-
-    // 평점 필터
-    if (props.voteAverage > 0) {
-      params.append('vote_average.gte', props.voteAverage.toString())
-      params.append('vote_average.lte', (props.voteAverage + 1).toString())
-      params.append('vote_count.gte', '50') // 신뢰성 있는 평점을 위한 최소 투표 수
-    } else if (props.voteAverage === -2) {
-      params.append('vote_average.lte', '4')
-      params.append('vote_count.gte', '50')
-    }
-
-    const url = `https://api.themoviedb.org/3/discover/movie?${params.toString()}`
-    console.log('Fetching movies with URL:', url)
-
+    console.log('Final fetch URL:', url)
     const response = await axios.get(url)
     const newMovies = response.data.results || []
 
     if (newMovies.length > 0) {
-      movies.value = currentPage.value === 1 ? newMovies : [...movies.value, ...newMovies]
+      if (currentPage.value === 1) {
+        movies.value = newMovies
+      } else {
+        movies.value = [...movies.value, ...newMovies]
+      }
       currentPage.value++
     } else {
       hasMore.value = false
     }
+
+    console.log(`Fetched ${newMovies.length} movies`)
   } catch (error) {
     console.error('Error fetching movies:', error)
+    hasMore.value = false
   } finally {
     isLoading.value = false
   }
 }
 
-// 날짜 포맷 함수
-function formatDate(dateStr) {
-  if (!dateStr) return '미정'
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('ko-KR')
+function setupIntersectionObserver() {
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && !isLoading.value && hasMore.value) {
+        fetchMovies()
+      }
+    },
+    { rootMargin: '100px', threshold: 0.1 },
+  )
+  if (loadingTrigger.value) {
+    observer.observe(loadingTrigger.value)
+  }
 }
+
+onMounted(() => {
+  console.log('Component mounted, fetching movies...')
+  movies.value = []
+  currentPage.value = 1
+  hasMore.value = true
+  fetchMovies()
+  setupIntersectionObserver()
+})
+
+onUnmounted(() => {
+  if (observer) observer.disconnect()
+})
+
+// props 변경 감지
+watch(
+  [
+    () => props.fetchUrl,
+    () => props.genreCode,
+    () => props.sortingOrder,
+    () => props.voteAverage,
+    () => props.year,
+    () => props.adult,
+    () => props.runtime,
+    () => props.language,
+  ],
+  () => {
+    console.log('Props changed, resetting and fetching new movies')
+    movies.value = []
+    currentPage.value = 1
+    hasMore.value = true
+    fetchMovies()
+  },
+  { deep: true },
+)
 </script>
 
 <style scoped>
 .movie-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  width: 100%;
+  padding: 20px;
+}
+
+.list-view {
+  display: flex;
+  flex-direction: column;
   gap: 20px;
   padding: 20px;
 }
 
-.movie-card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  overflow: hidden;
-  transition: transform 0.2s;
-}
-
-.movie-card:hover {
-  transform: scale(1.05);
-}
-
-.movie-poster {
+.movie-banner {
   width: 100%;
-  height: 300px;
-  object-fit: cover;
+  height: 40vh;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.movie-banner:hover {
+  transform: scale(1.02);
+}
+
+.banner-image {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.banner-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
 }
 
 .movie-info {
-  padding: 10px;
+  flex: 1;
 }
 
-.movie-info h3 {
-  margin: 0;
-  font-size: 1.1em;
+.movie-info h2 {
+  font-size: 24px;
+  margin-bottom: 10px;
 }
 
 .movie-info p {
-  margin: 5px 0;
-  color: #666;
+  font-size: 14px;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.loading,
-.no-results {
-  text-align: center;
-  padding: 20px;
-  font-size: 1.2em;
-  color: #666;
+.movie-meta {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.play-btn,
+.wishlist-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.play-btn {
+  background-color: #e50914;
+  color: white;
+}
+
+.wishlist-btn {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.play-btn:hover {
+  background-color: #f40612;
+}
+
+.wishlist-btn:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 </style>
