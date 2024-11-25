@@ -153,7 +153,6 @@ function closeModal() {
   margin-top: 30px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 
 .grid-container {
@@ -166,16 +165,33 @@ function closeModal() {
 
 .movie-row {
   display: flex;
-  flex-wrap: wrap;
   justify-content: flex-start;
   gap: 30px;
+  margin: 0 auto 40px;
   width: 100%;
   max-width: 2000px;
+  flex-wrap: wrap;
+  padding: 0 20px;
 }
 
 .movie-card {
+  width: calc(16.666% - 25px);
+  margin: 0;
+  transition: transform 0.3s;
   position: relative;
-  transition: transform 0.3s ease;
+}
+
+.movie-card:hover {
+  transform: scale(1.1);
+  z-index: 2;
+}
+
+.movie-card img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 27/40;
+  border-radius: 8px;
+  object-fit: cover;
 }
 
 .poster-container {
@@ -409,27 +425,38 @@ function closeModal() {
   }
 }
 
-/* 뷰 토글 버튼 스타일 */
+/* 뷰 토글 버튼 스타일 수정 */
 .view-toggle {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
   justify-content: flex-end;
-  padding-right: 20px;
+  margin-top: 20px;
 }
 
 .view-toggle button {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
+  background-color: #333;
   color: white;
+  border: none;
+  padding: 10px 15px;
+  margin-left: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
 }
 
 .view-toggle button.active {
-  background: rgba(255, 255, 255, 0.3);
+  background-color: #535bf2; /* Popular 컴포넌트와 동일한 활성 색상 */
+}
+
+.view-toggle button:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+  .view-toggle {
+    margin-top: 30px;
+  }
 }
 
 /* 리스트 뷰 스타일 */
@@ -568,5 +595,47 @@ function closeModal() {
 /* 호버 시에도 제목 크기 유지 */
 .movie-card:hover .movie-title {
   font-size: 14px;
+}
+
+/* 2. 모달 내 영화 제목 스타일 분리 */
+/* 그리드 뷰의 영화 제목 (기존 유지) */
+.movie-title {
+  margin-top: 5px;
+  text-align: center;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+  line-height: 1.2;
+  color: #fff;
+}
+
+/* 모달 내 영화 제목 새로운 스타일 */
+.modal-text-content h2.movie-title {
+  font-size: 2.5em;
+  margin: 0 0 15px 0;
+  padding: 0;
+  text-align: left;
+  white-space: normal;
+  line-height: 1.2;
+  color: white;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* 모달 내 다른 스타일들은 유지 */
+.modal-main-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 30px;
+  margin-top: 150px;
+}
+
+/* 모바일 반응형 스타일 */
+@media (max-width: 768px) {
+  .modal-text-content h2.movie-title {
+    font-size: 1.8em;
+  }
 }
 </style>
