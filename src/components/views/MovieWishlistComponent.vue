@@ -686,4 +686,23 @@ function closeModal() {
 .movie-grid {
   margin-top: 20px;
 }
+
+.movie-card:hover img {
+  transform: scale(1.1);  /* 1.2에서 1.1로 축소 */
+  transition: transform 0.3s ease;
+}
+
+.movie-card.recommended::after {
+  content: '추천됨';
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #1db954;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  z-index: 3;
+}
 </style>
