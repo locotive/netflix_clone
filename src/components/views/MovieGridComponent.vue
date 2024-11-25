@@ -79,6 +79,13 @@
         </div>
       </div>
     </div>
+
+    <!-- 페이지네이션 버튼 추가 -->
+    <div class="pagination">
+      <button @click="prevPage" :disabled="currentPage === 1">이전</button>
+      <span>{{ currentPage }} / {{ totalPages }}</span>
+      <button @click="nextPage" :disabled="currentPage === totalPages">다음</button>
+    </div>
   </div>
 </template>
 
@@ -151,15 +158,16 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 30px;
+  padding: 20px;
 }
 
 .movie-row {
   display: flex;
   justify-content: center;
   gap: 30px;
-  margin: 0 auto 40px;
   width: 100%;
-  max-width: 2000px;
+  max-width: 1800px;
 }
 
 .grid-container.list .movie-row {
@@ -217,6 +225,7 @@
   justify-content: center;
   align-items: center;
   margin-top: 20px;
+  gap: 15px;
 }
 
 .pagination button {
@@ -224,9 +233,13 @@
   color: white;
   border: none;
   padding: 10px 15px;
-  margin: 0 10px;
   cursor: pointer;
   border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.pagination button:hover:not(:disabled) {
+  background-color: #444;
 }
 
 .pagination button:disabled {
@@ -234,8 +247,13 @@
   cursor: not-allowed;
 }
 
+.pagination span {
+  color: #fff;
+  font-size: 1.1em;
+}
+
 .loading-overlay {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
@@ -433,6 +451,14 @@
   .modal-body {
     margin-top: 60px;
     padding: 20px;
+  }
+
+  .movie-row {
+    gap: 15px;
+  }
+
+  .movie-card {
+    width: calc(33.333% - 10px);
   }
 }
 

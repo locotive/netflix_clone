@@ -37,7 +37,7 @@
             </div>
             <p class="overview">{{ movie.overview || '줄거리 없음' }}</p>
             <div class="list-actions">
-              <button class="info-btn" @click.stop="handleInfoClick($event, movie)">
+              <button class="info-btn" @click.stop="handleInfoClick($event, movie)" @mouseenter="showTooltip($event, '영화 상세정보 보기')" @mouseleave="hideTooltip">
                 <font-awesome-icon :icon="faInfoCircle" /> 상세정보
               </button>
             </div>
@@ -97,6 +97,9 @@
           </div>
         </div>
       </div>
+    </div>
+    <div v-if="tooltip.visible" class="tooltip" :style="tooltip.style">
+      {{ tooltip.text }}
     </div>
   </div>
 </template>
@@ -256,9 +259,9 @@ function closeModal() {
 }
 
 function handleInfoClick(event, movie) {
-  console.log('Info button clicked for movie:', movie.title);
-  event.stopPropagation();
-  showMovieDetails(movie);
+  event.stopPropagation()
+  hideTooltip()
+  showMovieDetails(movie)
 }
 
 function getImageUrl(path) {
@@ -273,6 +276,68 @@ function handleImageError(e) {
 function handleImageLoad(e) {
   console.log('Image loaded successfully:', e.target.src);
 }
+
+// 툴팁 관련 상태 추가
+const tooltip = ref({
+  visible: false,
+  text: '',
+  style: {
+    top: '0px',
+    left: '0px'
+  }
+})
+
+const mousePosition = ref({ x: 0, y: 0 })
+
+// 툴팁 표시 함수
+function showTooltip(event, text) {
+  mousePosition.value = {
+    x: event.clientX,
+    y: event.clientY
+  }
+  tooltip.value = {
+    visible: true,
+    text: text,
+    style: {
+      top: `${event.clientY + 10}px`,
+      left: `${event.clientX + 10}px`
+    }
+  }
+}
+
+// 툴팁 숨김 함수
+function hideTooltip() {
+  tooltip.value.visible = false
+}
+
+// 툴팁 위치 업데이터
+let tooltipUpdater = null
+function startTooltipUpdater() {
+  tooltipUpdater = setInterval(() => {
+    if (tooltip.value.visible) {
+      tooltip.value.style = {
+        top: `${mousePosition.value.y + 10}px`,
+        left: `${mousePosition.value.x + 10}px`
+      }
+    }
+  }, 1500)
+}
+
+function stopTooltipUpdater() {
+  if (tooltipUpdater) {
+    clearInterval(tooltipUpdater)
+    tooltipUpdater = null
+  }
+}
+
+// 컴포넌트 마운트/언마운트 시 툴팁 업데이터 처리
+onMounted(() => {
+  startTooltipUpdater()
+})
+
+onUnmounted(() => {
+  stopTooltipUpdater()
+})
 </script>
 
 <style scoped>
@@ -490,6 +555,7 @@ img.loaded {
 .list-actions .info-btn {
   background: rgba(255, 255, 255, 0.2);
   color: white;
+  cursor: pointer;
 }
 
 .list-actions button:hover {
@@ -661,5 +727,18 @@ img.loaded {
     margin-top: 60px;
     padding: 20px;
   }
+}
+
+.tooltip {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 1000;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 </style>

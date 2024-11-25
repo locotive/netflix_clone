@@ -3,7 +3,7 @@
     <MovieSearch @changeOptions="changeOptions" />
     <MovieInfiniteScroll
       :apiKey="apiKey"
-      :fetchUrl="null"
+      :fetchUrl="getFilteredMoviesURL"
       :genreCode="genreId"
       :sortingOrder="sortId"
       :voteAverage="voteAverageId"
