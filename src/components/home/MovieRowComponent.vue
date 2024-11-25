@@ -29,7 +29,7 @@
             v-for="movie in movies"
             :key="movie.id"
             class="movie-card"
-            @click="toggleWishlist(movie)"
+            @click="handleWishlistToggle(movie)"
           >
             <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
             <!-- 좋아요 인디케이터 -->
@@ -54,6 +54,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import axios from 'axios'
 import { useWishlist } from '@/services/wishlistService'
+import { useToast } from "vue-toastification";
 
 const props = defineProps({
   title: String,
@@ -70,7 +71,8 @@ const maxScroll = ref(0)
 const slider = ref(null)
 const sliderWindow = ref(null)
 
-const { toggleWishlist, isInWishlist } = useWishlist()
+const toast = useToast();
+const { toggleWishlist: toggleWishlistService, isInWishlist } = useWishlist()
 
 const atLeftEdge = computed(() => scrollAmount.value <= 0)
 const atRightEdge = computed(() => scrollAmount.value >= maxScroll.value)
@@ -152,25 +154,43 @@ function calculateMaxScroll() {
     console.error('Slider or SliderWindow references are not available.')
   }
 }
+
+function handleWishlistToggle(movie) {
+  const wasInWishlist = isInWishlist(movie.id);
+  toggleWishlistService(movie);
+
+  if (!wasInWishlist) {
+    toast.success(`'${movie.title}' 위시리스트에 추가되었습니다!`);
+  } else {
+    toast.info(`'${movie.title}' 위시리스트에서 제거되었습니다.`);
+  }
+}
 </script>
 
 <style scoped>
 .movie-card {
-  position: relative; /* 각 영화의 기준 위치 */
+  position: relative;
   width: 100%;
   display: inline-block;
   aspect-ratio: 27/40;
+  transition: transform 0.3s;
+}
+
+.movie-card:hover {
+  transform: scale(1.1);
+  z-index: 1;
 }
 
 .wishlist-indicator {
   position: absolute;
-  top: 5px;
-  right: 5px;
-  background-color: rgba(0, 0, 0, 0.7);
+  top: 0;
+  right: 10px;
+  font-size: 20px;
+  background-color: rgba(229, 9, 20, 0.5);
+  box-shadow: 0 0 5px rgba(229, 9, 20, 0.7);
+  border-radius: 0 4px 0 4px;
+  padding: 5px 8px;
   color: white;
-  padding: 5px;
-  border-radius: 50%;
-  font-size: 12px;
 }
 
 .movie-row {
