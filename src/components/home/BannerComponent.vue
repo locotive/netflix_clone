@@ -1,6 +1,9 @@
 <template>
   <div v-if="movie" class="banner" :style="bannerStyle">
-    <div class="banner-content">
+    <div v-if="!bannerLoaded" class="loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
+    <div class="banner-content" v-show="bannerLoaded">
       <h1>{{ movie.title }}</h1>
       <p>{{ movie.overview }}</p>
       <div class="button-group">
@@ -30,11 +33,17 @@
 
       <div class="modal-body">
         <div class="modal-main-info">
-          <img
-            :src="`https://image.tmdb.org/t/p/original${selectedMovie.poster_path}`"
-            :alt="selectedMovie.title"
-            class="modal-poster"
-          />
+          <div class="modal-poster-container">
+            <div v-if="!modalImageLoaded" class="loading-overlay">
+              <div class="loading-spinner"></div>
+            </div>
+            <img
+              :src="`https://image.tmdb.org/t/p/original${selectedMovie.poster_path}`"
+              :alt="selectedMovie.title"
+              class="modal-poster"
+              @load="modalImageLoaded = true"
+            />
+          </div>
           <div class="modal-text-content">
             <h2 class="movie-title">{{ selectedMovie.title }}</h2>
             <div class="meta-info">
@@ -384,5 +393,37 @@ function closeModal() {
 
 .banner-button.wishlist:hover .active {
   color: #ff0f1f;
+}
+
+/* 로딩 인디케이터 스타일 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>

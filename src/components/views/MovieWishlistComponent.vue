@@ -15,11 +15,19 @@
     <template v-else>
       <!-- 그리드 뷰 -->
       <div v-if="currentView === 'grid'" class="movie-grid">
-        <div class="grid-container">
+        <div class="grid-container"></div>
           <div class="movie-row">
             <div v-for="movie in wishlist" :key="movie.id" class="movie-card">
               <div class="poster-container" @click="toggleWishlist(movie)">
-                <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
+                <div v-if="!movie.imageLoaded" class="loading-overlay">
+                  <div class="loading-spinner"></div>
+                </div>
+                <img
+                  :src="getImageUrl(movie.poster_path)"
+                  :alt="movie.title"
+                  @load="movie.imageLoaded = true"
+                  :class="{ 'loaded': movie.imageLoaded }"
+                />
                 <div class="remove-overlay">
                   <font-awesome-icon :icon="faHeart" class="heart-icon" />
                   <span>찜 해제</span>
