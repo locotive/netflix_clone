@@ -17,10 +17,9 @@ export default {
     }
   },
 
-  getURL4PopularMovies(page = 1) {
-    // 환경 변수에서 apiKey 가져오기
+  getURL4PopularMovies() {
     const apiKey = import.meta.env.VITE_TMDB_API_KEY
-    return `https://api.themoviedb.org/3/movie/popular?api_key=${apiKey}&language=ko-KR&page=${page}`
+    return `https://api.themoviedb.org/3/movie/popular?api_key=${apiKey}&language=ko-KR`
   },
 
   getURL4ReleaseMovies(page = 1) {
