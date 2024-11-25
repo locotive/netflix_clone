@@ -38,17 +38,31 @@
     </div>
 
     <!-- List View -->
-    <div v-if="currentView === 'list'" class="list-container">
-      <div v-for="(movie, index) in wishlistMovies" :key="index" class="movie-list-item">
-        <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
-        <div class="movie-list-info">
-          <h3>{{ movie.title }}</h3>
-          <p v-if="movie.release_date">개봉일: {{ movie.release_date }}</p>
-          <p v-if="movie.vote_average">평점: {{ movie.vote_average.toFixed(1) }}</p>
+    <div v-else class="movie-list-container">
+      <div v-for="movie in wishlistMovies" :key="movie.id" class="movie-item">
+        <div class="movie-poster">
+          <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
         </div>
-        <button @click="toggleWishlist(movie)" class="list-remove-button">
-          <font-awesome-icon :icon="faHeart" />
-        </button>
+        <div class="movie-info">
+          <h3 class="movie-title">{{ movie.title }}</h3>
+          <div class="movie-genres">
+            {{ movie.genres?.map((genre) => genre.name).join(', ') }}
+          </div>
+          <p class="movie-overview">{{ movie.overview }}</p>
+          <div class="movie-details">
+            <span class="movie-rating">
+              <font-awesome-icon :icon="faStar" class="star-icon" />
+              {{ movie.vote_average?.toFixed(1) }}
+            </span>
+            <span class="movie-runtime" v-if="movie.runtime"> {{ movie.runtime }}분 </span>
+            <span class="movie-year">
+              {{ movie.release_date?.split('-')[0] }}
+            </span>
+            <button @click="toggleWishlist(movie)" class="remove-button">
+              <font-awesome-icon :icon="faHeart" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -57,10 +71,11 @@
 </template>
 
 <script>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useWishlist } from '@/services/wishlistService'
-import { faHeart, faTh, faBars } from '@fortawesome/free-solid-svg-icons'
+import { faHeart, faTh, faBars, faStar } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import axios from 'axios'
 
 export default {
   name: 'MovieWishlistComponent',
@@ -69,8 +84,58 @@ export default {
   },
   setup() {
     const { getCurrentWishlist, toggleWishlist } = useWishlist()
-    const wishlistMovies = ref(getCurrentWishlist())
+    const wishlistMovies = ref([])
     const currentView = ref('grid')
+    const apiKey = import.meta.env.VITE_TMDB_API_KEY
+
+    const fetchMovieDetails = async (movie) => {
+      try {
+        console.log('Fetching details for movie:', movie.id)
+        const response = await axios.get(
+          `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${apiKey}&language=ko-KR`,
+        )
+        console.log('Received movie details:', response.data)
+        return { ...movie, ...response.data }
+      } catch (error) {
+        console.error(`Error fetching details for movie ${movie.id}:`, error)
+        return movie
+      }
+    }
+
+    const fetchAllMovieDetails = async () => {
+      const currentWishlist = getCurrentWishlist()
+      console.log('Current wishlist from movieWishlist:', currentWishlist)
+
+      if (!currentWishlist || currentWishlist.length === 0) {
+        console.log('Wishlist is empty')
+        wishlistMovies.value = []
+        return
+      }
+
+      try {
+        const detailedMovies = await Promise.all(
+          currentWishlist.map((movie) => fetchMovieDetails(movie)),
+        )
+        console.log('All detailed movies:', detailedMovies)
+        wishlistMovies.value = detailedMovies
+      } catch (error) {
+        console.error('Error fetching all movie details:', error)
+      }
+    }
+
+    onMounted(() => {
+      console.log('Component mounted')
+      fetchAllMovieDetails()
+    })
+
+    watch(
+      () => getCurrentWishlist(),
+      (newWishlist) => {
+        console.log('Wishlist changed:', newWishlist)
+        fetchAllMovieDetails()
+      },
+      { immediate: true },
+    )
 
     const getImageUrl = (posterPath) => {
       return posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : '/placeholder-image.jpg'
@@ -79,13 +144,6 @@ export default {
     const setView = (view) => {
       currentView.value = view
     }
-
-    watch(
-      () => getCurrentWishlist(),
-      (newWishlist) => {
-        wishlistMovies.value = newWishlist
-      },
-    )
 
     return {
       wishlistMovies,
@@ -96,6 +154,7 @@ export default {
       faHeart,
       faTh,
       faBars,
+      faStar,
     }
   },
 }
@@ -154,97 +213,98 @@ export default {
 }
 
 /* List View Styles */
-.list-container {
+.movie-list-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 20px;
 }
 
-.movie-list-item {
+.movie-item {
   display: flex;
-  align-items: center;
-  padding: 15px;
-  border-bottom: 1px solid #ddd;
-  gap: 20px;
-}
-
-.movie-list-item img {
-  width: 100px;
-  height: 150px;
-  object-fit: cover;
-  border-radius: 4px;
-}
-
-.movie-list-info {
-  flex-grow: 1;
-}
-
-.movie-list-info h3 {
-  margin: 0 0 10px 0;
-}
-
-.movie-list-info p {
-  margin: 5px 0;
-  color: #666;
-}
-
-/* Common Styles */
-.poster-container {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 2/3;
-}
-
-.poster-container img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  margin-bottom: 20px;
+  background: #1a1a1a;
   border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+
+.movie-item:hover {
+  transform: translateY(-2px);
+}
+
+.movie-poster {
+  flex: 0 0 150px;
+}
+
+.movie-poster img {
+  width: 100%;
+  height: 225px;
+  object-fit: cover;
 }
 
 .movie-info {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.movie-info h3 {
+.movie-title {
   margin: 0;
-  font-size: 1rem;
-  white-space: nowrap;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.movie-genres {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.movie-overview {
+  margin: 0;
+  color: #ccc;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-/* Grid View Remove Button */
+.movie-details {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: #999;
+}
+
+.movie-rating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.star-icon {
+  color: #ffd700;
+}
+
+.movie-runtime {
+  color: #888;
+}
+
 .remove-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  margin-left: auto;
   background: none;
   border: none;
   color: #ff4081;
   cursor: pointer;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   padding: 5px;
-  z-index: 1;
 }
 
-/* List View Remove Button */
-.list-remove-button {
-  background: none;
-  border: none;
-  color: #ff4081;
-  cursor: pointer;
-  font-size: 1.5rem;
-  padding: 5px;
-  margin-right: 20px;
-}
-
-.remove-button:hover,
-.list-remove-button:hover {
+.remove-button:hover {
   color: #ff1744;
 }
 
@@ -266,14 +326,21 @@ export default {
     padding: 10px;
   }
 
-  .movie-list-item {
+  .movie-item {
     flex-direction: column;
-    text-align: center;
   }
 
-  .movie-list-item img {
-    width: 150px;
-    height: 225px;
+  .movie-poster {
+    flex: 0 0 auto;
+  }
+
+  .movie-poster img {
+    width: 100%;
+    height: 300px;
+  }
+
+  .movie-info {
+    padding: 15px;
   }
 }
 </style>

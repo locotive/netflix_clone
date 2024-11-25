@@ -17,7 +17,7 @@ export default {
     }
   },
 
-  getURL4PopularMovies(page = 1) {
+  getURL4PopularMovies() {
     const apiKey = import.meta.env.VITE_TMDB_API_KEY
     return `https://api.themoviedb.org/3/movie/popular?api_key=${apiKey}&language=ko-KR`
   },

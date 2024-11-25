@@ -138,6 +138,7 @@ onMounted(() => {
   currentPage.value = 1
   hasMore.value = true
   fetchMovies()
+  setupIntersectionObserver()
 })
 
 onUnmounted(() => {
