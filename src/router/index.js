@@ -3,7 +3,6 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 // 라우트 컴포넌트
 import HomeComponent from '@/components/home/HomeComponent.vue'
 import SignInComponent from '@/components/sign-in/SignInComponent.vue'
-import AboutView from '@/views/AboutView.vue'
 
 const routes = [
   {
@@ -30,11 +29,6 @@ const routes = [
         path: 'search',
         name: 'HomeSearch',
         component: () => import('@/components/search/HomeSearchComponent.vue'),
-      },
-      {
-        path: 'about',
-        name: 'About',
-        component: AboutView,
       },
     ],
   },

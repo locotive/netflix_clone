@@ -31,9 +31,19 @@
             class="movie-card"
           >
             <div class="image-wrapper" @click="handleWishlistToggle(movie)">
-              <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
+              <div v-if="!imageLoaded" class="loading-overlay">
+                <div class="loading-spinner"></div>
+              </div>
+              <img
+                :src="getImageUrl(movie.poster_path)"
+                :alt="movie.title"
+                @load="imageLoaded = true"
+                loading="lazy"
+              />
             </div>
-            <div v-if="isInWishlist(movie.id)" class="wishlist-indicator">👍</div>
+            <div v-if="isInWishlist(movie.id)" class="wishlist-badge">
+              <span>👍</span>
+            </div>
             <div class="grid-actions">
               <button class="grid-info-btn" @click.stop="showMovieDetails(movie)">
                 상세정보
@@ -103,7 +113,6 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import axios from 'axios'
 import { useWishlist } from '@/services/wishlistService'
-import { useToast } from "vue-toastification";
 import { faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
 
 const props = defineProps({
@@ -121,13 +130,13 @@ const maxScroll = ref(0)
 const slider = ref(null)
 const sliderWindow = ref(null)
 
-const toast = useToast();
 const { toggleWishlist: toggleWishlistService, isInWishlist } = useWishlist()
 
 const atLeftEdge = computed(() => scrollAmount.value <= 0)
 const atRightEdge = computed(() => scrollAmount.value >= maxScroll.value)
 
 const selectedMovie = ref(null)
+const imageLoaded = ref(false)
 
 onMounted(async () => {
   if (!props.fetchUrl) {
@@ -212,14 +221,7 @@ function calculateMaxScroll() {
 }
 
 function handleWishlistToggle(movie) {
-  const wasInWishlist = isInWishlist(movie.id);
   toggleWishlistService(movie);
-
-  if (!wasInWishlist) {
-    toast.success(`'${movie.title}' 위시리스트에 추가되었습니다!`);
-  } else {
-    toast.info(`'${movie.title}' 위시리스트에서 제거되었습니다.`);
-  }
 }
 
 function showMovieDetails(movie) {
@@ -251,28 +253,51 @@ function closeModal() {
 }
 
 .image-wrapper {
-  width: 100%;
-  height: 100%;
+  position: relative;
   overflow: hidden;
-  border-radius: 4px;
+  transition: transform 0.3s ease;
 }
 
-.movie-card:hover {
+.movie-card:hover .image-wrapper {
   transform: scale(1.1);
-  z-index: 1;
+  z-index: 2;
 }
 
-.wishlist-indicator {
+.loading-overlay {
   position: absolute;
   top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left-color: #e50914;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.wishlist-badge {
+  position: absolute;
+  top: 10px;
   right: 10px;
-  font-size: 20px;
-  background-color: rgba(229, 9, 20, 0.5);
-  box-shadow: 0 0 5px rgba(229, 9, 20, 0.7);
-  border-radius: 0 4px 0 4px;
-  padding: 5px 8px;
+  background: rgba(229, 9, 20, 0.8);
   color: white;
-  z-index: 2;
+  padding: 5px 8px;
+  border-radius: 4px;
+  z-index: 3;
+  transition: transform 0.3s ease;
+}
+
+.movie-card:hover .wishlist-badge {
+  transform: scale(1.1);
 }
 
 .movie-row {
@@ -549,5 +574,27 @@ function closeModal() {
   .modal-main-info {
     grid-template-columns: 1fr;
   }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.movie-card.recommended {
+  position: relative;
+}
+
+.movie-card.recommended::after {
+  content: '추천됨';
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #1db954;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  z-index: 3;
 }
 </style>

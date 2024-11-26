@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!isHidden" id="app">
+  <div id="app">
     <header></header>
     <RouterView :key="$route.fullPath" />
   </div>

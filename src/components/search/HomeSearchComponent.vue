@@ -3,92 +3,97 @@
     <MovieSearch @changeOptions="changeOptions" />
     <MovieInfiniteScroll
       :apiKey="apiKey"
+      :fetchUrl="getFilteredMoviesURL"
       :genreCode="genreId"
       :sortingOrder="sortId"
-      :voteAverage="ageId"
+      :voteAverage="voteAverageId"
       :year="yearId"
-      :adult="adultId"
       :runtime="runtimeId"
       :language="languageId"
+      :adult="adultId"
     />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import MovieSearch from './MovieSearchComponent.vue'
 import MovieInfiniteScroll from '../views/MovieInfiniteScrollComponent.vue'
+import urlService from '@/services/urlService'
 
 const apiKey = import.meta.env.VITE_TMDB_API_KEY
-if (!apiKey) {
-  console.error('API Key is not defined in environment variables')
-}
-
-const genreId = ref('28')
-const ageId = ref(-1)
+const genreId = ref('0')
+const voteAverageId = ref(-1)
 const sortId = ref('popularity.desc')
 const yearId = ref(null)
-const adultId = ref(false)
 const runtimeId = ref(null)
 const languageId = ref(null)
+const adultId = ref(false)
+
+// URL 생성을 computed로 변경
+const getFilteredMoviesURL = computed(() => {
+  return urlService.getFilteredMoviesURL({
+    genre: genreId.value,
+    rating: voteAverageId.value,
+    language: languageId.value,
+    year: yearId.value,
+    sortBy: sortId.value,
+    runtime: runtimeId.value,
+    adult: adultId.value
+  })
+})
 
 function changeOptions(options) {
-  console.log('Received options:', options)
-
-  const genreCode = {
-    '장르 (전체)': '28',
-    Action: '28',
-    Adventure: '12',
-    Comedy: '35',
-    Crime: '80',
-    Family: '10751',
-  }
-
-  const ratingCode = {
-    '평점 (전체)': -1,
-    '9~10': 9,
-    '8~9': 8,
-    '7~8': 7,
-    '6~7': 6,
-    '5~6': 5,
-    '4~5': 4,
-    '4점 이하': -2,
-  }
-
-  const sortingCode = {
-    '정렬 (기본)': 'popularity.desc',
-    '인기도 높은순': 'popularity.desc',
-    '인기도 낮은순': 'popularity.asc',
-    '평점 높은순': 'vote_average.desc',
-    '평점 낮은순': 'vote_average.asc',
-    최신순: 'primary_release_date.desc',
-    오래된순: 'primary_release_date.asc',
-  }
-
-  const runtimeRanges = {
-    '상영시간 (전체)': null,
-    '90분 이하': { gte: 0, lte: 90 },
-    '90-120분': { gte: 90, lte: 120 },
-    '120분 이상': { gte: 120, lte: 999 },
-  }
-
-  genreId.value = genreCode[options.genre] || '28'
-  ageId.value = ratingCode[options.rating] || -1
-  sortId.value = sortingCode[options.sort] || 'popularity.desc'
-  yearId.value = options.year === '연도 (전체)' ? null : options.year
-  adultId.value = options.adult === '성인물 포함'
-  runtimeId.value = runtimeRanges[options.runtime]
-  languageId.value =
-    options.language === '언어 (전체)' ? null : options.language === '영어' ? 'en' : 'ko'
-
-  console.log('Updating filter values:', {
+  console.log('Before update - Current values:', {
     genre: genreId.value,
-    rating: ageId.value,
+    rating: voteAverageId.value,
     sort: sortId.value,
     year: yearId.value,
-    adult: adultId.value,
     runtime: runtimeId.value,
     language: languageId.value,
+    adult: adultId.value
+  })
+
+  // 장르 설정
+  genreId.value = options.genre !== '장르 (전체)' ?
+    urlService.genreCodes[options.genre] : '0'
+
+  // 평점 설정
+  const ratingRanges = {
+    '평점 (전체)': -1,
+    '9점 이상': 9,
+    '8점 이상': 8,
+    '7점 이상': 7,
+    '6점 이상': 6,
+    '5점 이상': 5,
+    '4점 이상': 4,
+    '3점 이상': 3
+  }
+  voteAverageId.value = ratingRanges[options.rating] || -1
+
+  // 정렬 설정
+  sortId.value = urlService.sortingCodes[options.sort] || 'popularity.desc'
+
+  // 연도 설정
+  yearId.value = options.year === '연도 (전체)' ? null : options.year
+
+  // 상영시간 설정
+  runtimeId.value = options.runtime === '상영시간 (전체)' ? null : options.runtime
+
+  // 언어 설정
+  languageId.value = urlService.languageCodes[options.language]
+
+  // 성인물 포함 여부만 설정
+  adultId.value = options.adult === '성인물 포함'
+
+  console.log('After update - New values:', {
+    genre: genreId.value,
+    rating: voteAverageId.value,
+    sort: sortId.value,
+    year: yearId.value,
+    runtime: runtimeId.value,
+    language: languageId.value,
+    adult: adultId.value
   })
 }
 </script>
