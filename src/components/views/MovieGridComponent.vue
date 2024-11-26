@@ -587,10 +587,12 @@
 </style>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, onBeforeUnmount, computed } from 'vue'
 import axios from 'axios'
 import { useWishlist } from '@/services/wishlistService'
 import { faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
+import { useMovieUtils } from '@/composables/useMovieUtils'
+import { movieService } from '@/services/api/movieService'
 
 const props = defineProps({
   fetchUrl: String,
@@ -601,16 +603,15 @@ const movies = ref([])
 const currentPage = ref(1)
 const rowSize = ref(4)
 const moviesPerPage = ref(20)
-const isMobile = ref(window.innerWidth <= 768)
 const currentView = ref('grid')
 
 const { toggleWishlist, isInWishlist } = useWishlist()
-
-
-const isLoading = ref(false)
+const { isMobile, isLoading, getImageUrl, cleanup } = useMovieUtils()
 
 // Fetch movies
-async function fetchMovies() {
+async function fetchMovies(page = 1) {
+  if (isLoading.value) return
+
   try {
     isLoading.value = true
     const response = await axios.get(props.fetchUrl)
@@ -645,43 +646,28 @@ function prevPage() {
   if (currentPage.value > 1) currentPage.value--
 }
 
-function handleResize() {
-  isMobile.value = window.innerWidth <= 768
-  calculateLayout()
-}
-
 function calculateLayout() {
   if (gridContainer.value) {
     rowSize.value = isMobile.value ? 3 : 6
-
     const numberOfRows = 3
     moviesPerPage.value = rowSize.value * numberOfRows
   }
 }
 
-function getImageUrl(path) {
-  return `https://image.tmdb.org/t/p/w300${path}`
-}
-
-// 컴포넌트 마운트 및 언마운트 시 처리
 onMounted(async () => {
   await fetchMovies()
   calculateLayout()
-  window.addEventListener('resize', handleResize)
 })
 
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
+onBeforeUnmount(() => {
+  cleanup()
 })
 
 const selectedMovie = ref(null)
 
 async function showMovieDetails(movie) {
   try {
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=ko-KR`
-    )
-    selectedMovie.value = response.data
+    selectedMovie.value = await movieService.getMovieDetails(movie.id)
   } catch (error) {
     console.error('Error fetching movie details:', error)
   }
