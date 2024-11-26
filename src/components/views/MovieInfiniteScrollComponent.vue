@@ -1,274 +1,744 @@
 <template>
   <div class="movie-grid" ref="gridContainer">
-    <div v-if="movies.length === 0">영화를 불러오는 중...</div>
-    <div v-else class="list-view">
-      <div v-for="movie in movies" :key="movie.id" class="movie-banner">
-        <div
-          class="banner-image"
-          :style="{ backgroundImage: `url(${getBackdropUrl(movie.backdrop_path)})` }"
-        >
-          <div class="banner-content">
-            <div class="movie-info">
-              <h2>{{ movie.title }}</h2>
-              <p>{{ movie.overview }}</p>
-              <div class="movie-meta">
-                <span class="rating">평점: {{ movie.vote_average.toFixed(1) }}</span>
-                <span class="release-date">개봉일: {{ movie.release_date }}</span>
-              </div>
+    <div v-if="isLoading && movies.length === 0" class="loading">
+      <div class="loading-spinner"></div>
+      <p>영화를 불러오는 중...</p>
+    </div>
+    <div v-else-if="!isLoading && movies.length === 0" class="no-results">
+      검색 결과가 없습니다. 필터 조건을 변경해보세요.
+    </div>
+    <div v-else class="movie-list">
+      <div
+        v-for="movie in movies"
+        :key="movie.id"
+        class="movie-item"
+        :class="{ 'in-wishlist': isInWishlist(movie.id) }"
+        @click="toggleWishlist(movie)"
+      >
+        <div class="poster-container">
+          <div v-if="!movie.imageLoaded" class="loading-overlay">
+            <div class="loading-spinner"></div>
+          </div>
+          <img
+            :src="movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '/no-poster.jpg'"
+            :alt="movie.title"
+            class="movie-poster"
+            loading="lazy"
+            @load="movie.imageLoaded = true"
+            :class="{ 'loaded': movie.imageLoaded }"
+          />
+        </div>
+        <div class="movie-info">
+          <h3>{{ movie.title }}</h3>
+          <div class="movie-details">
+            <div class="meta-info">
+              <p class="rating">⭐ {{ movie.vote_average.toFixed(1) }}</p>
+              <p class="release-date">{{ formatDate(movie.release_date) }}</p>
             </div>
-            <div class="action-buttons">
-              <button class="play-btn">재생</button>
-              <button class="wishlist-btn" @click="toggleWishlist(movie)">
-                {{ isInWishlist(movie.id) ? '찜해제' : '찜하기' }}
+            <p class="overview">{{ movie.overview || '줄거리 없음' }}</p>
+            <div class="list-actions">
+              <button class="info-btn" @click.stop="handleInfoClick($event, movie)" @mouseenter="showTooltip($event, '영화 상세정보 보기')" @mouseleave="hideTooltip">
+                <font-awesome-icon :icon="faInfoCircle" /> 상세정보
               </button>
+            </div>
+          </div>
+        </div>
+        <div v-if="isInWishlist(movie.id)" class="wishlist-badge">
+          찜됨
+        </div>
+      </div>
+    </div>
+    <div v-if="isLoading && movies.length > 0" class="loading-more">
+      <div class="loading-spinner"></div>
+      <p>더 많은 영화를 불러오는 중...</p>
+    </div>
+    <div v-if="selectedMovie" class="movie-modal" @click.self="closeModal">
+      <div class="modal-content">
+        <div
+          class="modal-backdrop"
+          :style="{
+            backgroundImage: `url(https://image.tmdb.org/t/p/original${selectedMovie.backdrop_path})`,
+          }"
+        >
+          <div class="backdrop-overlay"></div>
+        </div>
+
+        <button class="close-btn" @click="closeModal">
+          <font-awesome-icon :icon="faTimes" />
+        </button>
+
+        <div class="modal-body">
+          <div class="modal-main-info">
+            <img
+              :src="`https://image.tmdb.org/t/p/w500${selectedMovie.poster_path}`"
+              :alt="selectedMovie.title"
+              class="modal-poster"
+              @error="handleImageError"
+              @load="handleImageLoad"
+            />
+            <div class="modal-text-content">
+              <h2 class="movie-title">{{ selectedMovie.title }}</h2>
+              <div class="meta-info">
+                <span class="rating">
+                  <font-awesome-icon :icon="faStar" /> {{ selectedMovie.vote_average?.toFixed(1) }}
+                </span>
+                <span class="year">{{ selectedMovie.release_date?.split('-')[0] }}</span>
+                <span class="runtime" v-if="selectedMovie.runtime">
+                  {{ selectedMovie.runtime }}분
+                </span>
+              </div>
+              <p class="overview">{{ selectedMovie.overview }}</p>
+              <div class="genre-tags" v-if="selectedMovie.genres">
+                <span v-for="genre in selectedMovie.genres" :key="genre.id" class="genre-tag">
+                  {{ genre.name }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <div ref="loadingTrigger"></div>
+    <div v-if="tooltip.visible" class="tooltip" :style="tooltip.style">
+      {{ tooltip.text }}
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
+import urlService from '@/services/urlService'
 import { useWishlist } from '@/services/wishlistService'
+import { faHeart, faInfoCircle, faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
 
 const props = defineProps({
+  apiKey: {
+    type: String,
+    required: true
+  },
+  fetchUrl: {
+    type: String,
+    required: true
+  },
   genreCode: String,
-  apiKey: String,
   sortingOrder: String,
   voteAverage: Number,
-  year: String,
-  adult: Boolean,
-  runtime: Object,
+  year: [String, Number],
+  runtime: String,
   language: String,
-  fetchUrl: String,
+  adult: Boolean
 })
 
 const movies = ref([])
 const currentPage = ref(1)
 const isLoading = ref(false)
 const hasMore = ref(true)
-const gridContainer = ref(null)
-const loadingTrigger = ref(null)
-let observer = null
 
-const { toggleWishlist, isInWishlist } = useWishlist()
+const { isInWishlist, toggleWishlist } = useWishlist()
 
-function getBackdropUrl(path) {
-  return path ? `https://image.tmdb.org/t/p/w1280${path}` : '/placeholder-backdrop.jpg'
+function formatDate(dateStr) {
+  if (!dateStr) return '개봉일 미정'
+  return new Date(dateStr).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 }
 
-async function fetchMovies() {
-  if (isLoading.value || !hasMore.value) return
+// URL 생성 함수
+const getFinalUrl = (page) => {
+  if (!props.fetchUrl) {
+    // 기본 URL 생성 (검색 페이지용)
+    return urlService.getFilteredMoviesURL({
+      page,
+      genre: props.genreCode,
+      rating: props.voteAverage,
+      language: props.language,
+      year: props.year,
+      sortBy: props.sortingOrder,
+      runtime: props.runtime,
+      adult: props.adult
+    })
+  }
+  // Popular 페이지용 URL
+  return `${props.fetchUrl}&page=${page}`
+}
 
-  isLoading.value = true
+// 영화 데이터 로드 함수 수정
+const loadMovies = async () => {
+  if (isLoading.value) return
+
   try {
-    let url
-    // fetchUrl이 제공된 경우 (Popular 리스트용)
-    if (props.fetchUrl) {
-      url = `${props.fetchUrl}&page=${currentPage.value}`
-      console.log('Using provided fetchUrl:', url)
-    } else {
-      // 검색 조건에 따른 URL 구성 (Search 컴포넌트용)
-      url = `https://api.themoviedb.org/3/discover/movie?api_key=${props.apiKey}&language=ko-KR&page=${currentPage.value}`
+    isLoading.value = true
+    const url = getFinalUrl(currentPage.value)
+    console.log('Loading movies from URL:', url)
 
-      if (props.genreCode && props.genreCode !== '0') {
-        url += `&with_genres=${props.genreCode}`
-      }
-
-      if (props.voteAverage > 0) {
-        if (props.voteAverage === -2) {
-          url += `&vote_average.lte=4`
-        } else {
-          url += `&vote_average.gte=${props.voteAverage}`
-        }
-      }
-
-      if (props.sortingOrder && props.sortingOrder !== 'all') {
-        url += `&sort_by=${props.sortingOrder}`
-      }
-
-      // ... other filters ...
-    }
-
-    console.log('Final fetch URL:', url)
     const response = await axios.get(url)
-    const newMovies = response.data.results || []
 
-    if (newMovies.length > 0) {
+    if (response.data && response.data.results) {
+      const newMovies = response.data.results
       if (currentPage.value === 1) {
         movies.value = newMovies
       } else {
         movies.value = [...movies.value, ...newMovies]
       }
-      currentPage.value++
-    } else {
-      hasMore.value = false
+      console.log(`Loaded ${newMovies.length} movies. Total: ${movies.value.length}`)
     }
-
-    console.log(`Fetched ${newMovies.length} movies`)
   } catch (error) {
-    console.error('Error fetching movies:', error)
-    hasMore.value = false
+    console.error('Error loading movies:', error)
   } finally {
     isLoading.value = false
   }
 }
 
-function setupIntersectionObserver() {
-  observer = new IntersectionObserver(
-    (entries) => {
-      if (entries[0].isIntersecting && !isLoading.value && hasMore.value) {
-        fetchMovies()
-      }
-    },
-    { rootMargin: '100px', threshold: 0.1 },
-  )
-  if (loadingTrigger.value) {
-    observer.observe(loadingTrigger.value)
+// props가 변경될 때 데이터 리로드
+watch(
+  () => [
+    props.genreCode,
+    props.sortingOrder,
+    props.voteAverage,
+    props.year,
+    props.runtime,
+    props.language,
+    props.adult
+  ],
+  () => {
+    console.log('Search params changed, reloading data...')
+    currentPage.value = 1
+    movies.value = []
+    loadMovies()
+  }
+)
+
+const gridContainer = ref(null)
+const observer = ref(null)
+
+// 스크롤 감지 함수 추가
+const handleScroll = () => {
+  const scrollPosition = window.innerHeight + window.scrollY
+  const bottomOfPage = document.documentElement.offsetHeight - 200 // 하단에서 200px 여유
+
+  console.log('Scroll Position:', scrollPosition)
+  console.log('Bottom of Page:', bottomOfPage)
+
+  if (scrollPosition >= bottomOfPage && !isLoading.value) {
+    console.log('Loading more movies...')
+    currentPage.value++
+    loadMovies()
   }
 }
 
+// 컴포넌트 마운트 시 스크롤 이벤트 리스너 추가
 onMounted(() => {
-  console.log('Component mounted, fetching movies...')
-  movies.value = []
-  currentPage.value = 1
-  hasMore.value = true
-  fetchMovies()
-  setupIntersectionObserver()
+  window.addEventListener('scroll', handleScroll)
+  loadMovies() // 초기 데이터 로드
+})
+
+// 컴포넌트 언마운트 시 이벤트 리스너 제거
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+
+const selectedMovie = ref(null)
+
+async function showMovieDetails(movie) {
+  try {
+    console.log('Fetching movie details for:', movie.id);
+    const response = await axios.get(
+      `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=ko-KR`
+    );
+    console.log('Movie details response:', response.data);
+    selectedMovie.value = response.data;
+  } catch (error) {
+    console.error('Error fetching movie details:', error);
+  }
+}
+
+function closeModal() {
+  selectedMovie.value = null
+}
+
+function handleInfoClick(event, movie) {
+  event.stopPropagation()
+  hideTooltip()
+  showMovieDetails(movie)
+}
+
+function getImageUrl(path) {
+  return `https://image.tmdb.org/t/p/w500${path}`
+}
+
+// 이미지 로드 관련 디버깅
+function handleImageError(e) {
+  console.error('Image failed to load:', e.target.src);
+}
+
+function handleImageLoad(e) {
+  console.log('Image loaded successfully:', e.target.src);
+}
+
+// 툴팁 관련 상태 추가
+const tooltip = ref({
+  visible: false,
+  text: '',
+  style: {
+    top: '0px',
+    left: '0px'
+  }
+})
+
+const mousePosition = ref({ x: 0, y: 0 })
+
+// 툴팁 표시 함수
+function showTooltip(event, text) {
+  mousePosition.value = {
+    x: event.clientX,
+    y: event.clientY
+  }
+  tooltip.value = {
+    visible: true,
+    text: text,
+    style: {
+      top: `${event.clientY + 10}px`,
+      left: `${event.clientX + 10}px`
+    }
+  }
+}
+
+// 툴팁 숨김 함수
+function hideTooltip() {
+  tooltip.value.visible = false
+}
+
+// 툴팁 위치 업데이터
+let tooltipUpdater = null
+function startTooltipUpdater() {
+  tooltipUpdater = setInterval(() => {
+    if (tooltip.value.visible) {
+      tooltip.value.style = {
+        top: `${mousePosition.value.y + 10}px`,
+        left: `${mousePosition.value.x + 10}px`
+      }
+    }
+  }, 1500)
+}
+
+function stopTooltipUpdater() {
+  if (tooltipUpdater) {
+    clearInterval(tooltipUpdater)
+    tooltipUpdater = null
+  }
+}
+
+// 컴포넌트 마운트/언마운트 시 툴팁 업데이터 처리
+onMounted(() => {
+  startTooltipUpdater()
 })
 
 onUnmounted(() => {
-  if (observer) observer.disconnect()
+  stopTooltipUpdater()
 })
-
-// props 변경 감지
-watch(
-  [
-    () => props.fetchUrl,
-    () => props.genreCode,
-    () => props.sortingOrder,
-    () => props.voteAverage,
-    () => props.year,
-    () => props.adult,
-    () => props.runtime,
-    () => props.language,
-  ],
-  () => {
-    console.log('Props changed, resetting and fetching new movies')
-    movies.value = []
-    currentPage.value = 1
-    hasMore.value = true
-    fetchMovies()
-  },
-  { deep: true },
-)
 </script>
 
 <style scoped>
 .movie-grid {
-  width: 100%;
-  padding: 20px;
-}
-
-.list-view {
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding: 20px;
 }
 
-.movie-banner {
-  width: 100%;
-  height: 40vh;
-  border-radius: 10px;
-  overflow: hidden;
-  position: relative;
-  transition: transform 0.3s ease;
+.movie-list {
+  display: flex;
+  flex-direction: column;
+  width: 98%;
+  max-width: 2400px;
+  margin: 0 auto;
+  gap: 30px;
+  padding: 20px 10px;
 }
 
-.movie-banner:hover {
+.movie-item {
+  width: 100%;
+  position: relative;
+  display: flex;
+  background: #333;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.movie-item img {
+  width: 200px;
+  height: 300px;
+  object-fit: cover;
+}
+
+.movie-info {
+  padding: 20px;
+  flex-grow: 1;
+}
+
+.movie-item:hover {
   transform: scale(1.02);
 }
 
-.banner-image {
+.poster-container {
+  position: relative;
+  width: 200px;
+  aspect-ratio: 2/3;
+  background: #1a1a1a;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #1a1a1a;
+  z-index: 1;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left-color: #e50914;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+img {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+img.loaded {
+  opacity: 1;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.wishlist-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(229, 9, 20, 0.8);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  z-index: 3;
+}
+
+.movie-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.movie-item:hover .movie-poster {
+  transform: scale(1.05);
+}
+
+.movie-info h3 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: white;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.movie-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.meta-info {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.rating {
+  color: #ffd700;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.release-date {
+  color: #aaa;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.overview {
+  color: #ddd;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left-color: #e50914;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading, .no-results, .loading-more {
+  text-align: center;
+  padding: 20px;
+  color: white;
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  .movie-list {
+    width: 100%;
+    padding: 10px;
+    gap: 15px;
+  }
+
+  .movie-item {
+    flex-direction: column;
+  }
+
+  .movie-item img {
+    width: 100%;
+    height: auto;
+  }
+
+  .movie-info {
+    padding: 15px;
+  }
+}
+
+.list-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.list-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.list-actions .info-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  cursor: pointer;
+}
+
+.list-actions button:hover {
+  transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+  .list-actions {
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+}
+
+/* 모달 관련 스타일 추가 */
+.movie-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 95%;
+  max-width: 1400px;
+  max-height: 95vh;
+  background: #141414;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  animation: modalFadeIn 0.3s ease;
+}
+
+.modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   background-size: cover;
   background-position: center;
-  position: relative;
+  z-index: 0;
 }
 
-.banner-content {
+.backdrop-overlay {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
-  right: 0;
-  padding: 20px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(20, 20, 20, 0.5), #141414);
 }
 
-.movie-info {
-  flex: 1;
-}
-
-.movie-info h2 {
-  font-size: 24px;
-  margin-bottom: 10px;
-}
-
-.movie-info p {
-  font-size: 14px;
-  margin-bottom: 10px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.movie-meta {
-  display: flex;
-  gap: 20px;
-  font-size: 14px;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-.play-btn,
-.wishlist-btn {
-  padding: 8px 16px;
+.close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.6);
   border: none;
-  border-radius: 5px;
+  color: white;
+  font-size: 1.5em;
+  border-radius: 50%;
   cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background-color 0.3s ease;
 }
 
-.play-btn {
-  background-color: #e50914;
+.close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.modal-body {
+  position: relative;
+  z-index: 1;
+  padding: 30px;
+  margin-top: 120px;
+}
+
+.modal-main-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.modal-poster {
+  width: 300px;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  opacity: 1;
+}
+
+.modal-text-content {
   color: white;
 }
 
-.wishlist-btn {
-  background-color: rgba(255, 255, 255, 0.2);
+.modal-text-content h2.movie-title {
+  font-size: 2.5em;
+  margin: 0 0 15px 0;
+  text-align: left;
+}
+
+.meta-info {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  color: #999;
+}
+
+.overview {
+  font-size: 1.1em;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  color: #ccc;
+}
+
+.genre-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.genre-tag {
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  font-size: 0.9em;
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-main-info {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-poster {
+    width: 200px;
+    margin: 0 auto;
+  }
+
+  .modal-text-content h2.movie-title {
+    font-size: 1.8em;
+  }
+
+  .modal-body {
+    margin-top: 60px;
+    padding: 20px;
+  }
+}
+
+.tooltip {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.8);
   color: white;
-}
-
-.play-btn:hover {
-  background-color: #f40612;
-}
-
-.wishlist-btn:hover {
-  background-color: rgba(255, 255, 255, 0.3);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 1000;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 </style>

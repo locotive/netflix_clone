@@ -10,35 +10,587 @@
           v-for="movie in movieGroup"
           :key="movie.id"
           class="movie-card"
-          @mouseup="toggleWishlist(movie)"
-          @mouseover="showTooltip(movie.title, $event)"
-          @mouseleave="hideTooltip"
-          @mousemove="updateMousePosition"
         >
-          <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" />
-          <div class="movie-title">{{ movie.title }}</div>
-          <div v-if="isInWishlist(movie.id)" class="wishlist-indicator">👍</div>
+          <div class="image-wrapper" @click="handleWishlistToggle(movie)">
+            <div v-if="!movie.imageLoaded" class="loading-overlay">
+              <div class="loading-spinner"></div>
+            </div>
+            <img
+              :src="getImageUrl(movie.poster_path)"
+              :alt="movie.title"
+              @load="movie.imageLoaded = true"
+              loading="lazy"
+            />
+          </div>
+          <div v-if="isInWishlist(movie.id)" class="wishlist-badge">
+            <span>👍</span>
+          </div>
+          <div class="grid-actions">
+            <button class="grid-info-btn" @click="handleInfoClick($event, movie)">
+              상세정보
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 커스텀 툴팁 -->
-    <div v-if="tooltip.visible" :style="tooltip.style" class="tooltip">
-      {{ tooltip.text }}
+    <!-- 모달은 그대로 유지 -->
+    <div v-if="selectedMovie" class="movie-modal" @click.self="closeModal">
+      <div class="modal-content">
+        <div
+          class="modal-backdrop"
+          :style="{
+            backgroundImage: `url(https://image.tmdb.org/t/p/original${selectedMovie.backdrop_path})`,
+          }"
+        >
+          <div class="backdrop-overlay"></div>
+        </div>
+
+        <button class="close-btn" @click="closeModal">
+          <font-awesome-icon :icon="faTimes" />
+        </button>
+
+        <div class="modal-body">
+          <div class="modal-main-info">
+            <img
+              :src="`https://image.tmdb.org/t/p/w500${selectedMovie.poster_path}`"
+              :alt="selectedMovie.title"
+              class="modal-poster"
+            />
+            <div class="modal-text-content">
+              <h2 class="movie-title">{{ selectedMovie.title }}</h2>
+              <div class="meta-info">
+                <span class="rating">
+                  <font-awesome-icon :icon="faStar" /> {{ selectedMovie.vote_average?.toFixed(1) }}
+                </span>
+                <span class="year">{{ selectedMovie.release_date?.split('-')[0] }}</span>
+                <span class="runtime" v-if="selectedMovie.runtime">
+                  {{ selectedMovie.runtime }}분
+                </span>
+              </div>
+              <p class="overview">{{ selectedMovie.overview }}</p>
+              <div class="genre-tags" v-if="selectedMovie.genres">
+                <span v-for="genre in selectedMovie.genres" :key="genre.id" class="genre-tag">
+                  {{ genre.name }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="pagination" v-if="totalPages > 1">
-      <button @click="prevPage" :disabled="currentPage === 1">&lt; 이전</button>
+    <!-- 페이지네이션 버튼 추가 -->
+    <div class="pagination">
+      <button @click="prevPage" :disabled="currentPage === 1">이전</button>
       <span>{{ currentPage }} / {{ totalPages }}</span>
-      <button @click="nextPage" :disabled="currentPage === totalPages">다음 &gt;</button>
+      <button @click="nextPage" :disabled="currentPage === totalPages">다음</button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.tooltip {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 1000;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.wishlist-indicator {
+  position: absolute;
+  top: 0;
+  right: 10px;
+  font-size: 20px;
+  background-color: rgba(229, 9, 20, 0.5);
+  box-shadow: 0 0 5px rgba(229, 9, 20, 0.7);
+}
+
+.movie-card.in-wishlist::after {
+  content: '찜됨';
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #e50914;  /* Netflix 레드 컬러 */
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  z-index: 3;
+  transition: all 0.3s ease;
+  animation: popIn 0.3s ease;
+}
+
+.movie-card:hover.in-wishlist::after {
+  transform: scale(1.1);
+  background: #ff0f1f;  /* 좀 더 밝은 레드 */
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.movie-grid {
+  width: 100%;
+  height: calc(100vh - 200px);
+  margin-bottom: 40px;
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.grid-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  padding: 20px;
+}
+
+.movie-row {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  width: 100%;
+  max-width: 1800px;
+}
+
+.grid-container.list .movie-row {
+  flex-direction: column;
+}
+
+.movie-card {
+  position: relative;
+  width: calc(16.666% - 25px);
+  margin: 0;
+  transition: transform 0.3s;
+  cursor: pointer;
+}
+
+.grid-container.list .movie-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.movie-card:hover {
+  transform: scale(1.05);
+  z-index: 2;
+}
+
+.movie-card:hover img {
+  transform: none;
+}
+
+.movie-title {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+  line-height: 1.2;
+  color: #fff;
+  transition: color 0.3s ease;
+}
+
+.movie-card:hover .movie-title {
+  color: #535bf2;
+}
+
+.grid-container.list .movie-title {
+  text-align: left;
+  white-space: normal;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 15px;
+}
+
+.pagination button {
+  background-color: #333;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.pagination button:hover:not(:disabled) {
+  background-color: #444;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  color: #fff;
+  font-size: 1.1em;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left-color: #e50914;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.movie-card.in-wishlist {
+  position: relative;
+}
+
+.movie-card.in-wishlist::after {
+  content: '찜됨';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(229, 9, 20, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  z-index: 2;
+}
+
+.movie-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 95%;
+  max-width: 1400px;
+  max-height: 95vh;
+  background: #141414;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  animation: modalFadeIn 0.3s ease;
+}
+
+.modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.backdrop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(20, 20, 20, 0.5), #141414);
+}
+
+.close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  color: white;
+  font-size: 1.5em;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+.close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.modal-body {
+  position: relative;
+  z-index: 1;
+  padding: 30px;
+  margin-top: 120px;
+}
+
+.modal-main-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.modal-poster {
+  width: 300px;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.modal-text-content {
+  color: white;
+}
+
+.modal-text-content h2.movie-title {
+  font-size: 2.5em;
+  margin: 0 0 15px 0;
+  text-align: left;
+}
+
+.meta-info {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  color: #999;
+}
+
+.overview {
+  font-size: 1.1em;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  color: #ccc;
+}
+
+.genre-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.genre-tag {
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  font-size: 0.9em;
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  .modal-main-info {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-poster {
+    width: 200px;
+    margin: 0 auto;
+  }
+
+  .modal-text-content h2.movie-title {
+    font-size: 1.8em;
+  }
+
+  .modal-body {
+    margin-top: 60px;
+    padding: 20px;
+  }
+
+  .movie-row {
+    gap: 15px;
+  }
+
+  .movie-card {
+    width: calc(33.333% - 10px);
+  }
+}
+
+.grid-actions {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.grid-info-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(180, 180, 180, 0.9);
+  backdrop-filter: blur(4px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: #1a1a1a;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.movie-card:hover .grid-actions {
+  opacity: 1;
+  transform: translateY(-5px);
+}
+
+.image-wrapper {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease;
+}
+
+.movie-card:hover .image-wrapper {
+  transform: scale(1.1);
+  z-index: 2;
+}
+
+.wishlist-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(229, 9, 20, 0.8);
+  color: white;
+  padding: 5px 8px;
+  border-radius: 4px;
+  z-index: 3;
+  transition: transform 0.3s ease;
+}
+
+.movie-card:hover .wishlist-badge {
+  transform: scale(1.1);
+}
+
+.grid-actions {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.grid-info-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(180, 180, 180, 0.9);
+  backdrop-filter: blur(4px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: #1a1a1a;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.grid-info-btn:hover {
+  transform: scale(1.05);
+  background: rgba(210, 210, 210, 1);
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
+}
+
+.movie-card:hover .grid-actions {
+  opacity: 1;
+  transform: translateY(-5px);
+}
+
+.image-wrapper {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease;
+}
+
+.movie-card:hover .image-wrapper {
+  transform: scale(1.1);
+  z-index: 2;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #1a1a1a;
+  z-index: 1;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left-color: #e50914;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+</style>
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import axios from 'axios'
 import { useWishlist } from '@/services/wishlistService'
+import { faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
 
 const props = defineProps({
   fetchUrl: String,
@@ -54,79 +606,19 @@ const currentView = ref('grid')
 
 const { toggleWishlist, isInWishlist } = useWishlist()
 
-// 툴팁 상태 관리
-const tooltip = ref({
-  visible: false,
-  text: '',
-  style: {
-    top: '0px',
-    left: '0px',
-  },
-})
 
-// 마우스 위치 관리
-const mousePosition = ref({ x: 0, y: 0 })
-
-// 마우스 위치 갱신
-function updateMousePosition(event) {
-  mousePosition.value = {
-    x: event.clientX,
-    y: event.clientY,
-  }
-}
-
-// 툴팁 표시 함수
-function showTooltip(text, event) {
-  tooltip.value.text = text
-  tooltip.value.visible = true
-  tooltip.value.style = {
-    top: `${event.clientY + 10}px`,
-    left: `${event.clientX + 10}px`,
-  }
-}
-
-// 툴팁 숨김 함수
-function hideTooltip() {
-  tooltip.value.visible = false
-}
-
-// 1.5초마다 툴팁 위치를 갱신
-let tooltipUpdater = null
-function startTooltipUpdater() {
-  tooltipUpdater = setInterval(() => {
-    if (tooltip.value.visible) {
-      tooltip.value.style = {
-        top: `${mousePosition.value.y + 10}px`,
-        left: `${mousePosition.value.x + 10}px`,
-      }
-    }
-  }, 1500)
-}
-
-function stopTooltipUpdater() {
-  if (tooltipUpdater) {
-    clearInterval(tooltipUpdater)
-    tooltipUpdater = null
-  }
-}
+const isLoading = ref(false)
 
 // Fetch movies
 async function fetchMovies() {
   try {
-    const totalMoviesNeeded = 120
-    const numberOfPages = Math.ceil(totalMoviesNeeded / 20)
-    let allMovies = []
-
-    for (let page = 1; page <= numberOfPages; page++) {
-      const response = await axios.get(props.fetchUrl, {
-        params: { page, per_page: moviesPerPage.value },
-      })
-      allMovies = [...allMovies, ...response.data.results]
-    }
-
-    movies.value = allMovies.slice(0, totalMoviesNeeded)
+    isLoading.value = true
+    const response = await axios.get(props.fetchUrl)
+    movies.value = response.data.results
   } catch (error) {
     console.error('Error fetching movies:', error)
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -176,131 +668,36 @@ onMounted(async () => {
   await fetchMovies()
   calculateLayout()
   window.addEventListener('resize', handleResize)
-  startTooltipUpdater()
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  stopTooltipUpdater()
 })
+
+const selectedMovie = ref(null)
+
+async function showMovieDetails(movie) {
+  try {
+    const response = await axios.get(
+      `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=ko-KR`
+    )
+    selectedMovie.value = response.data
+  } catch (error) {
+    console.error('Error fetching movie details:', error)
+  }
+}
+
+function closeModal() {
+  selectedMovie.value = null
+}
+
+function handleWishlistToggle(movie) {
+  toggleWishlist(movie)
+}
+
+// 이벤트 전파 중단을 위한 stop 수정자 추가
+function handleInfoClick(event, movie) {
+  event.stopPropagation()
+  showMovieDetails(movie)
+}
 </script>
-
-<style scoped>
-.tooltip {
-  position: fixed;
-  background-color: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  z-index: 1000;
-  pointer-events: none;
-  white-space: nowrap;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-
-.wishlist-indicator {
-  position: absolute;
-  top: 0;
-  right: 10px;
-  font-size: 20px;
-  background-color: rgba(229, 9, 20, 0.5);
-  box-shadow: 0 0 5px rgba(229, 9, 20, 0.7);
-}
-
-.movie-grid {
-  width: 100%;
-  height: calc(100vh - 200px);
-  margin-bottom: 40px;
-  margin-top: 30px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.grid-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.movie-row {
-  display: flex;
-  justify-content: center;
-  gap: 30px;
-  margin: 0 auto 40px;
-  width: 100%;
-  max-width: 2000px;
-}
-
-.grid-container.list .movie-row {
-  flex-direction: column;
-}
-
-.movie-card {
-  width: calc(16.666% - 25px);
-  margin: 0;
-  transition: transform 0.3s;
-  position: relative;
-}
-
-.grid-container.list .movie-card {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.movie-card:hover {
-  transform: scale(1.1);
-}
-
-.movie-card img {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 27/40;
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-.grid-container.list .movie-card img {
-  width: 100px;
-  margin-right: 20px;
-}
-
-.movie-title {
-  margin-top: 5px;
-  text-align: center;
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.grid-container.list .movie-title {
-  text-align: left;
-  white-space: normal;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px;
-}
-
-.pagination button {
-  background-color: #333;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  margin: 0 10px;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-.pagination button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-</style>

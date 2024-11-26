@@ -22,10 +22,9 @@ export default {
     Banner,
     MovieRow,
   },
-  setup(props) {
+  setup() {
     const faSearchIcon = faSearch
     const faUserIcon = faUser
-    const apiKey = import.meta.env.VITE_TMDB_API_KEY
     const featuredMovie = ref(null)
     const popularMovies = ref([])
     const popularMoviesUrl = ref(URLService.getURL4PopularMovies(1))
