@@ -54,6 +54,7 @@ npm run dev
 ```
 
 4. 로그인
+- http://localhost:5173/netflix_clone/
 - 회원가입 시 입력한 비밀번호가 TMDB API 키로 사용됩니다
 - 유효한 TMDB API 키를 비밀번호로 사용해주세요
 
