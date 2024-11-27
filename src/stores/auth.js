@@ -6,10 +6,15 @@ export const useAuthStore = defineStore('auth', {
     apiKey: localStorage.getItem('TMDb-Key')
   }),
 
+  getters: {
+    getIsAuthenticated: (state) => state.isAuthenticated,
+    getApiKey: (state) => state.apiKey
+  },
+
   actions: {
-    login(apiKey) {
-      localStorage.setItem('TMDb-Key', apiKey)
-      this.apiKey = apiKey
+    login(key) {
+      localStorage.setItem('TMDb-Key', key)
+      this.apiKey = key
       this.isAuthenticated = true
       console.log('Store: 로그인 완료', {
         apiKey: this.apiKey,

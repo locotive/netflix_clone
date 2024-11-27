@@ -53,16 +53,23 @@
           <div :class="['card', { hidden: isLoginVisible }]" id="register">
             <form @submit.prevent="handleRegister">
               <h1>Sign up</h1>
-              <div class="input" :class="{ active: isRegisterEmailFocused || registerEmail }">
+              <div class="input">
                 <input
-                  id="register-email"
                   type="email"
                   v-model="registerEmail"
                   @focus="focusInput('registerEmail')"
-                  @blur="blurInput('registerEmail')"
+                  @blur="handleBlur('registerEmail')"
                   required
                 />
-                <label for="register-email">Email</label>
+                <label :class="{
+                  'label-active': isRegisterEmailFocused || registerEmail,
+                  'label-blue': isRegisterEmailFocused
+                }">이메일</label>
+                <transition name="fade">
+                  <small v-if="isRegisterEmailFocused" class="hint-text">
+                    유효한 이메일 주소를 입력해주세요
+                  </small>
+                </transition>
               </div>
               <div class="input" :class="{ active: isRegisterPasswordFocused || registerPassword }">
                 <input
@@ -105,7 +112,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
@@ -126,11 +133,51 @@ const isLoginVisible = ref(true)
 const isEmailFocused = ref(false)
 const isPasswordFocused = ref(false)
 const showTerms = ref(false)
+const isRegisterEmailFocused = ref(false)
+const isRegisterPasswordFocused = ref(false)
+const isConfirmPasswordFocused = ref(false)
 
-const validateEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
-}
+onMounted(() => {
+  // Remember Me 상태 복원
+  const savedRememberMe = localStorage.getItem('rememberMe')
+  console.log('Saved Remember Me:', savedRememberMe)
+  rememberMe.value = savedRememberMe === 'true'
+  console.log('Remember Me Value:', rememberMe.value)
+
+  // 저장된 사용자 정보 복원
+  const savedUser = localStorage.getItem('currentUser')
+  const savedApiKey = localStorage.getItem('TMDb-Key')
+  console.log('Saved User:', savedUser)
+  console.log('Saved API Key:', savedApiKey)
+
+  // Remember Me가 true일 때만 저장된 정보 복원
+  if (rememberMe.value && (savedUser || savedApiKey)) {
+    try {
+      if (savedUser) {
+        const userData = JSON.parse(savedUser)
+        email.value = userData.email || ''
+        console.log('Restored Email:', email.value)
+      }
+
+      if (savedApiKey) {
+        password.value = savedApiKey
+        console.log('Restored Password:', password.value)
+      } else {
+        console.log('No saved API Key found')
+      }
+    } catch (error) {
+      console.error('Error restoring saved data:', error)
+    }
+  } else {
+    console.log('Remember Me is disabled or no saved data found')
+  }
+
+  console.log('Final Form Values:', {
+    email: email.value,
+    password: password.value,
+    rememberMe: rememberMe.value
+  })
+})
 
 const handleLogin = async () => {
   if (!email.value.trim() || !password.value.trim()) {
@@ -138,70 +185,60 @@ const handleLogin = async () => {
     return;
   }
 
-  console.log('로그인 시도:', {
-    email: email.value,
-    password: password.value,
-    rememberMe: rememberMe.value,
-  });
-
-  // 이메일 유효성 검사
   if (!validateEmail(email.value)) {
     toast.error('유효한 이메일을 입력해주세요.');
     return;
   }
 
   try {
-    // 저장된 사용자 데이터 가져오기
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const user = users.find((u) => u.email === email.value);
+    const users = JSON.parse(localStorage.getItem('users') || '[]')
+    const user = users.find((u) => u.email === email.value)
 
-    // 사용자 확인
     if (!user) {
-      toast.error('등록되지 않은 이메일입니다.');
-      return;
+      toast.error('등록되지 않은 이메일입니다.')
+      return
     }
 
-    // 비밀번호(API 키) 확인
     if (user.apiKey !== password.value) {
-      toast.error('비밀번호가 일치하지 않습니다.');
-      return;
+      toast.error('비밀번호가 일치하지 않습니다.')
+      return
     }
 
-    // API 키 유효성 검사
-    const testResponse = await fetch(
-      `https://api.themoviedb.org/3/movie/popular?api_key=${password.value}`
-    );
-
-    if (testResponse.status !== 200) {
-      toast.warning('API 키가 유효하지 않습니다. 기본 상태로 로그인합니다.');
+    // Remember Me 설정과 사용자 정보 저장
+    if (rememberMe.value) {
+      console.log('Saving user data with Remember Me...')
+      localStorage.setItem('rememberMe', 'true')
+      localStorage.setItem(
+        'currentUser',
+        JSON.stringify({
+          email: email.value,
+        })
+      )
+      // 비밀번호(API Key) 저장
+      localStorage.setItem('TMDb-Key', password.value)
+      console.log('Saved API Key:', password.value)
     } else {
-      toast.success('API 키가 유효합니다.');
+      // Remember Me가 해제되어 있으면 기존 데이터 삭제
+      localStorage.removeItem('rememberMe')
+      localStorage.removeItem('currentUser')
+      localStorage.removeItem('TMDb-Key')
     }
 
-    // 로그인 처리: Pinia 스토어와 LocalStorage에 정보 저장
-    authStore.login(password.value); // Pinia 스토어에 비밀번호(API 키) 저장
-    localStorage.setItem(
-      'currentUser',
-      JSON.stringify({
-        email: user.email,
-        apiKey: password.value, // 비밀번호(API 키)를 그대로 저장
-      })
-    );
-
-    console.log('로그인 성공:', {
-      isAuthenticated: authStore.isAuthenticated,
-      apiKey: authStore.apiKey,
-    });
-
-    toast.success('로그인되었습니다.');
-    await router.push('/'); // 홈 화면으로 이동
+    await authStore.login(password.value)
+    toast.success('로그인되었습니다.')
+    await router.push('/')
   } catch (error) {
-    // 에러 처리
-    console.error('로그인 실패:', error);
-    toast.error('로그인 처리 중 오류가 발생했습니다.');
+    console.error('로그인 실패:', error)
+    toast.error('로그인 처리 중 오류가 발생했습니다.')
   }
-};
+}
 
+
+
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
 
 const handleRegister = async () => {
   console.log('회원가입 시도:', {
@@ -281,11 +318,17 @@ const handleRegister = async () => {
 const focusInput = (inputName) => {
   if (inputName === 'email') isEmailFocused.value = true
   if (inputName === 'password') isPasswordFocused.value = true
+  if (inputName === 'registerEmail') isRegisterEmailFocused.value = true
+  if (inputName === 'registerPassword') isRegisterPasswordFocused.value = true
+  if (inputName === 'confirmPassword') isConfirmPasswordFocused.value = true
 }
 
 const blurInput = (inputName) => {
   if (inputName === 'email') isEmailFocused.value = false
   if (inputName === 'password') isPasswordFocused.value = false
+  if (inputName === 'registerEmail') isRegisterEmailFocused.value = false
+  if (inputName === 'registerPassword') isRegisterPasswordFocused.value = false
+  if (inputName === 'confirmPassword') isConfirmPasswordFocused.value = false
 }
 
 const toggleForm = () => {
@@ -295,6 +338,16 @@ const toggleForm = () => {
 const handleTermsAccept = () => {
   acceptTerms.value = true
   showTerms.value = false
+}
+
+const handleBlur = (inputName) => {
+  setTimeout(() => {
+    if (inputName === 'email') isEmailFocused.value = false
+    if (inputName === 'password') isPasswordFocused.value = false
+    if (inputName === 'registerEmail') isRegisterEmailFocused.value = false
+    if (inputName === 'registerPassword') isRegisterPasswordFocused.value = false
+    if (inputName === 'confirmPassword') isConfirmPasswordFocused.value = false
+  }, 200)
 }
 </script>
 
@@ -704,5 +757,24 @@ button:hover {
     top: calc(5svh + 90px) !important;
     z-index: 1;
   }
+}
+
+.hint-text {
+  position: absolute;
+  bottom: -20px;
+  left: 5px;
+  font-size: 0.75rem;
+  color: #2196F3;
+  opacity: 0.8;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

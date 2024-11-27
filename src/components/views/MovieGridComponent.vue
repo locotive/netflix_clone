@@ -163,7 +163,6 @@
 
 .movie-row {
   display: flex;
-  justify-content: center;
   gap: 30px;
   margin: 0 auto 40px;
   width: 100%;
@@ -437,33 +436,36 @@
 /* 모바일 대응 */
 @media (max-width: 1200px) {
   .grid-container {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 15px;
   }
 }
 
 @media (max-width: 992px) {
   .grid-container {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 15px;
   }
 }
 
 @media (max-width: 480px) {
   .grid-container {
-    grid-template-columns: repeat(1, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
     padding: 10px;
   }
-
-  .movie-card {
-    min-width: 140px;
-  }
+  .movie-row {
+  display: grid; /* grid 레이아웃 사용 */
+  grid-auto-rows: auto; /* 행 높이는 콘텐츠에 따라 자동 */
+  gap: 30px; /* 열과 행 간격 */
+  margin: 0 auto 40px; /* 중앙 정렬 */
+  width: 100%; /* 부모 요소 전체 너비 */
+  max-width: 2000px; /* 최대 너비 제한 */
+  padding: 0 20px; /* 양쪽 여백 */
 }
 
-@media (max-width: 480px) {
-  .grid-container {
-    padding: 5px;
+  .movie-card {
+    min-width: 300px;
   }
 }
 
@@ -647,7 +649,7 @@ const props = defineProps({
 const gridContainer = ref(null)
 const movies = ref([])
 const currentPage = ref(1)
-const rowSize = ref(4)
+const rowSize = ref(2)
 const moviesPerPage = ref(24)
 const currentView = ref('grid')
 
@@ -674,15 +676,23 @@ const fetchMovies = async () => {
 const visibleMovieGroups = computed(() => {
   const startIndex = (currentPage.value - 1) * moviesPerPage.value
   const endIndex = startIndex + moviesPerPage.value
+
+  console.log('Current page:', currentPage.value)
+  console.log('Start index:', startIndex, 'End index:', endIndex)
+
   const paginatedMovies = movies.value.slice(startIndex, endIndex)
+  console.log('Paginated movies:', paginatedMovies)
 
   return paginatedMovies.reduce((resultArray, item, index) => {
     const groupIndex = Math.floor(index / rowSize.value)
+    console.log('Group index:', groupIndex, 'Item:', item)
+
     if (!resultArray[groupIndex]) resultArray[groupIndex] = []
     resultArray[groupIndex].push(item)
     return resultArray
   }, [])
 })
+
 
 const totalPages = computed(() => Math.ceil(movies.value.length / moviesPerPage.value))
 
