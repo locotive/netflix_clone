@@ -8,81 +8,38 @@
   </div>
 </template>
 
-<script>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { faSearch, faUser } from '@fortawesome/free-solid-svg-icons'
+<script setup>
+import { ref, onMounted } from 'vue'
+import createAPI from '@/services/apiService'
 import Banner from '@/components/home/BannerComponent.vue'
 import MovieRow from '@/components/home/MovieRowComponent.vue'
-import URLService from '@/services/urlService.js'
-import axios from 'axios'
 
-export default {
-  name: 'HomeMainComponent',
-  components: {
-    Banner,
-    MovieRow,
-  },
-  setup() {
-    const faSearchIcon = faSearch
-    const faUserIcon = faUser
-    const featuredMovie = ref(null)
-    const popularMovies = ref([])
-    const popularMoviesUrl = ref(URLService.getURL4PopularMovies(1))
-    const newReleasesUrl = ref(URLService.getURL4ReleaseMovies(2))
-    const actionMoviesUrl = ref(URLService.getURL4GenreMovies('28', 1))
+const featuredMovie = ref(null)
+const loading = ref(false)
+const error = ref(null)
+const popularMoviesUrl = ref('/movie/popular')
+const newReleasesUrl = ref('/movie/now_playing')
+const actionMoviesUrl = ref('/discover/movie?with_genres=28')
 
-    const loadFeaturedAndPopular = async () => {
-      try {
-        // 인기 영화 전체 목록을 가져옴
-        const response = await axios.get(popularMoviesUrl.value)
-        const movies = response.data.results
+const loadFeaturedAndPopular = async () => {
+  try {
+    loading.value = true
+    const api = createAPI()
+    console.log('Loading featured movies with API key:', api.defaults.params.api_key)
 
-        // 첫 번째 영화를 featured로 설정
-        featuredMovie.value = movies[0]
-
-        // 나머지 영화들을 popularMovies로 설정
-        popularMovies.value = movies.slice(1)
-
-        // popularMoviesUrl을 수정된 목록으로 업데이트
-        popularMoviesUrl.value = URLService.getURL4PopularMovies(1) +
-          `&page=1&without_movies=${featuredMovie.value.id}`
-
-      } catch (error) {
-        console.error('Error loading movies:', error)
-      }
-    }
-
-    const initializeScrollListener = () => {
-      const onScroll = () => {
-        const header = document.querySelector('.app-header')
-        if (window.scrollY > 50) {
-          header?.classList.add('scrolled')
-        } else {
-          header?.classList.remove('scrolled')
-        }
-      }
-      window.addEventListener('scroll', onScroll)
-
-      onUnmounted(() => {
-        window.removeEventListener('scroll', onScroll)
-      })
-    }
-
-    onMounted(() => {
-      loadFeaturedAndPopular()
-      initializeScrollListener()
-    })
-
-    return {
-      faSearchIcon,
-      faUserIcon,
-      featuredMovie,
-      popularMoviesUrl,
-      newReleasesUrl,
-      actionMoviesUrl,
-    }
-  },
+    const response = await api.get('/movie/popular')
+    featuredMovie.value = response.data.results[0]
+  } catch (err) {
+    console.error('Error loading movies:', err)
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
 }
+
+onMounted(() => {
+  loadFeaturedAndPopular()
+})
 </script>
 
 <style scoped>
