@@ -402,6 +402,8 @@ img {
 
 img.loaded {
   opacity: 1;
+  width: 100%;
+  height: 100%;
 }
 
 @keyframes spin {
@@ -507,16 +509,97 @@ img.loaded {
   }
 
   .movie-item {
+    display: flex;
     flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #333; /* 배경 추가 */
+    border-radius: 8px;
   }
 
-  .movie-item img {
-    width: 100%;
-    height: auto;
+  .poster-container {
+    position: relative;
+    width: 100%; /* 컨테이너 전체 너비 */
+    aspect-ratio: 2 / 3; /* 포스터 비율 유지 */
+    background: #1a1a1a;
+  }
+
+  .movie-poster {
+    width: 100%; /* 컨테이너 너비에 맞게 */
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .wishlist-badge {
+    position: absolute;
+    top: 8px; /* 찜 버튼 위치 */
+    right: 8px;
+    background: rgba(229, 9, 20, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: bold;
+    z-index: 2;
   }
 
   .movie-info {
-    padding: 15px;
+    width: 100%; /* 텍스트가 전체 너비를 차지 */
+    font-size: 0.9em;
+    text-align: center; /* 가운데 정렬 */
+    padding: 10px 0;
+  }
+
+  .movie-info h3 {
+    font-size: 1.1em;
+    margin-bottom: 8px;
+  }
+
+  .meta-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9em;
+    color: #aaa;
+  }
+
+  .overview {
+    font-size: 0.9em;
+    color: #ddd;
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .movie-item {
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .poster-container {
+    width: 100%; /* 480px 이하에서도 컨테이너 전체 너비 */
+  }
+
+  .wishlist-badge {
+    top: 5px; /* 버튼 위치 조금 더 조정 */
+    right: 5px;
+    font-size: 0.8em;
+    padding: 3px 6px;
+  }
+
+  .movie-info {
+    font-size: 0.8em;
+    padding: 5px 0;
+  }
+
+  .movie-info h3 {
+    font-size: 1em;
+  }
+
+  .overview {
+    font-size: 0.8em;
   }
 }
 
@@ -553,6 +636,7 @@ img.loaded {
     justify-content: flex-start;
   }
 }
+
 
 /* 모달 관련 스타일 추가 */
 .movie-modal {
