@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { movieService } from '@/services/api/movieService'
 
 export function useMovieGrid() {

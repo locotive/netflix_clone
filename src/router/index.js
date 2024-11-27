@@ -1,59 +1,62 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
-
-// 라우트 컴포넌트
-import HomeComponent from '@/components/home/HomeComponent.vue'
-import SignInComponent from '@/components/sign-in/SignInComponent.vue'
-
-const routes = [
-  {
-    path: '/',
-    component: HomeComponent,
-    meta: { requiresAuth: false },
-    children: [
-      {
-        path: '',
-        name: 'HomeMain',
-        component: () => import('@/components/home/HomeMainComponent.vue'),
-      },
-      {
-        path: 'wishlist',
-        name: 'HomeWishlist',
-        component: () => import('@/components/views/MovieWishlistComponent.vue'),
-      },
-      {
-        path: 'popular',
-        name: 'HomePopular',
-        component: () => import('@/components/home/HomePopularComponent.vue'),
-      },
-      {
-        path: 'search',
-        name: 'HomeSearch',
-        component: () => import('@/components/search/HomeSearchComponent.vue'),
-      },
-    ],
-  },
-  {
-    path: '/signin',
-    name: 'SignIn',
-    component: SignInComponent,
-  },
-]
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
-  history: createWebHashHistory(),
-  routes,
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/signin',
+      name: 'SignIn',
+      component: () => import('@/components/sign-in/SignInComponent.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/',
+      component: () => import('@/components/home/HomeComponent.vue'),
+      children: [
+        {
+          path: '',
+          name: 'Home',
+          component: () => import('@/components/home/HomeMainComponent.vue'),
+          meta: { requiresAuth: true }
+        },
+        {
+          path: 'popular',
+          name: 'Popular',
+          component: () => import('@/components/home/HomePopularComponent.vue'),
+          meta: { requiresAuth: true }
+        },
+        {
+          path: 'wishlist',
+          name: 'Wishlist',
+          component: () => import('@/components/views/MovieWishlistComponent.vue'),
+          meta: { requiresAuth: true }
+        },
+        {
+          path: 'search',
+          name: 'Search',
+          component: () => import('@/components/search/HomeSearchComponent.vue'),
+          meta: { requiresAuth: true }
+        }
+      ]
+    }
+  ]
 })
 
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('TMDb-Key') !== null
+  const authStore = useAuthStore()
+  authStore.checkAuth()
 
-  console.log('Route Change Detected:', { from: from.path, to: to.path })
-  console.log('Route Meta:', to.meta)
-  console.log('Is Authenticated:', isAuthenticated)
+  console.log('Navigation Guard:', {
+    to: to.path,
+    isAuthenticated: authStore.isAuthenticated,
+    requiresAuth: to.meta.requiresAuth
+  })
 
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    console.log('Redirecting to SignIn due to authentication.')
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/signin')
+  } else if (to.path === '/signin' && authStore.isAuthenticated) {
+    next('/')
   } else {
     next()
   }
