@@ -39,9 +39,8 @@
     </div>
   </div>
 </template>
-
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useMovieUtils } from '@/composables/useMovieUtils'
 import createAPI from '@/services/apiService'
 
@@ -56,7 +55,6 @@ const movies = ref([])
 const currentPage = ref(1)
 const totalPages = ref(0)
 const { getImageUrl } = useMovieUtils()
-const loading = ref(false)
 
 // 장르 매핑
 const genres = {
@@ -158,24 +156,7 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString('ko-KR')
 }
 
-// 페이지네이션 표시 로직
-const displayedPages = computed(() => {
-  const pages = []
-  const maxPages = 5 // 한 번에 표시할 페이지 수
-  let start = Math.max(1, currentPage.value - Math.floor(maxPages / 2))
-  let end = Math.min(totalPages.value, start + maxPages - 1)
-
-  if (end - start + 1 < maxPages) {
-    start = Math.max(1, end - maxPages + 1)
-  }
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i)
-  }
-  return pages
-})
-
-// 화면 크기 변경 감지
+// 페면 크기 변경 감지
 const handleResize = () => {
   fetchMovies() // 화면 크기 변경 시 다시 계산하고 가져오기
 }
