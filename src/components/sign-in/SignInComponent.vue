@@ -45,7 +45,7 @@
               <button type="submit" :disabled="!email || !password">Login</button>
             </form>
             <a href="javascript:void(0)" class="account-check" @click="toggleForm"
-              >Don't have an account? <b>Sign up</b></a
+              >Don't have an account? <b>Sign in</b></a
             >
           </div>
 
@@ -102,7 +102,7 @@
               <button type="submit">Register</button>
             </form>
             <a href="javascript:void(0)" class="account-check" @click="toggleForm"
-              >Already have an account? <b>Sign in</b></a
+              >Already have an account? <b>Sign up</b></a
             >
           </div>
         </div>
