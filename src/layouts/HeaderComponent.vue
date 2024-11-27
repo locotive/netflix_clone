@@ -17,9 +17,13 @@
         </nav>
       </div>
       <div class="header-right">
-        <button class="icon-button" @click="removeKey">
-          <font-awesome-icon icon="user" />
-        </button>
+        <div class="user-info">
+          <span class="user-email" v-if="currentUser">{{ currentUser.email }}</span>
+          <button class="logout-button" @click="handleLogout">
+            <font-awesome-icon icon="right-from-bracket" />
+            <span>로그아웃</span>
+          </button>
+        </div>
         <button class="icon-button mobile-menu-button" @click="toggleMobileMenu">
           <font-awesome-icon icon="bars" />
         </button>
@@ -54,14 +58,23 @@ export default {
   setup() {
     const isScrolled = ref(false)
     const isMobileMenuOpen = ref(false)
+    const currentUser = ref(null)
     const router = useRouter()
 
     const handleScroll = () => {
       isScrolled.value = window.scrollY > 50
     }
 
-    const removeKey = () => {
-      localStorage.removeItem('TMDb-Key')
+    const loadUserData = () => {
+      const userData = localStorage.getItem('currentUser')
+      if (userData) {
+        currentUser.value = JSON.parse(userData)
+      }
+    }
+
+    const handleLogout = () => {
+      localStorage.removeItem('currentUser')
+      currentUser.value = null
       router.push('/signin')
     }
 
@@ -86,6 +99,7 @@ export default {
 
     onMounted(() => {
       window.addEventListener('scroll', handleScroll)
+      loadUserData()
     })
 
     onUnmounted(() => {
@@ -95,7 +109,8 @@ export default {
     return {
       isScrolled,
       isMobileMenuOpen,
-      removeKey,
+      currentUser,
+      handleLogout,
       toggleMobileMenu,
     }
   },
@@ -232,6 +247,40 @@ export default {
   cursor: pointer;
 }
 
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-right: 1rem;
+}
+
+.user-email {
+  color: #e5e5e5;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logout-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: #e5e5e5;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.logout-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 @media (max-width: 768px) {
   .desktop-nav {
     display: none;
@@ -253,6 +302,14 @@ export default {
   a {
     text-align: left;
     font-size: 1.15rem !important;
+  }
+
+  .user-email {
+    max-width: 120px;
+  }
+
+  .logout-button span {
+    display: none;
   }
 }
 </style>

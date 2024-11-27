@@ -1,6 +1,6 @@
 <template>
-  <div class="table-container">
-    <table>
+  <div class="table-container" :style="{ height: tableHeight }">
+    <table class="movie-table">
       <thead>
         <tr>
           <th>포스터</th>
@@ -33,37 +33,15 @@
 
     <!-- 페이지네이션 -->
     <div class="pagination">
-      <button
-        :disabled="currentPage === 1"
-        @click="changePage(currentPage - 1)"
-        class="page-btn"
-      >
-        이전
-      </button>
-      <div class="page-numbers">
-        <button
-          v-for="page in displayedPages"
-          :key="page"
-          @click="changePage(page)"
-          :class="{ active: currentPage === page }"
-          class="page-btn"
-        >
-          {{ page }}
-        </button>
-      </div>
-      <button
-        :disabled="currentPage === totalPages"
-        @click="changePage(currentPage + 1)"
-        class="page-btn"
-      >
-        다음
-      </button>
+      <button @click="prevPage" :disabled="currentPage === 1">이전</button>
+      <span>{{ currentPage }} / {{ totalPages }}</span>
+      <button @click="nextPage" :disabled="currentPage === totalPages">다음</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useMovieUtils } from '@/composables/useMovieUtils'
 import createAPI from '@/services/apiService'
 
@@ -76,7 +54,7 @@ const props = defineProps({
 
 const movies = ref([])
 const currentPage = ref(1)
-const totalPages = ref(1)
+const totalPages = ref(0)
 const { getImageUrl } = useMovieUtils()
 const loading = ref(false)
 
@@ -107,28 +85,72 @@ const getGenres = (genreIds) => {
   return genreIds.map(id => genres[id]).filter(Boolean).join(', ')
 }
 
-const fetchMovies = async (page) => {
+const calculateMovieCount = () => {
+  const screenHeight = window.innerHeight
+  console.log('Screen Height:', screenHeight)
+
+  let movieCount
+  if (screenHeight <= 500) {
+    movieCount = 1
+  } else if (screenHeight <= 760) {
+    movieCount = 2
+  } else if (screenHeight <= 993) {
+    movieCount = 3
+  } else if (screenHeight <= 1150) {
+    movieCount = 4
+  } else if (screenHeight <= 1300) {
+    movieCount = 5
+  } else if (screenHeight <= 1500) {
+    movieCount = 6
+  } else {
+    movieCount = 7
+  }
+
+  console.log('Calculated movie count:', movieCount)
+  return movieCount
+}
+
+const tableHeight = ref('auto')
+
+const fetchMovies = async () => {
   try {
-    loading.value = true
-    const api = createAPI()
-    const response = await api.get(props.fetchUrl, {
+    const movieCount = calculateMovieCount()
+    console.log('Fetching movies with count:', movieCount)
+
+    const response = await createAPI().get(props.fetchUrl, {
       params: {
-        page: page
+        page: currentPage.value
       }
     })
-    movies.value = response.data.results.slice(0, 7)
-    totalPages.value = Math.min(response.data.total_pages, 500)
-    currentPage.value = page
+    movies.value = response.data.results.slice(0, movieCount)
+    totalPages.value = response.data.total_pages
+
+    const rowHeight = 120
+    const headerHeight = 40
+    const paginationSpace = 60
+    tableHeight.value = `${(movies.value.length * rowHeight) + headerHeight + paginationSpace}px`
   } catch (error) {
-    console.error('영화 목록 로딩 실패:', error)
-  } finally {
-    loading.value = false
+    console.error('Error fetching movies:', error)
   }
 }
 
-const changePage = (page) => {
-  if (page >= 1 && page <= totalPages.value) {
-    fetchMovies(page)
+// 페이지 변경 함수
+const changePage = async (page) => {
+  currentPage.value = page
+  await fetchMovies()
+}
+
+// 이전 페이지로 이동
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    changePage(currentPage.value - 1)
+  }
+}
+
+// 다음 페이지로 이동
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    changePage(currentPage.value + 1)
   }
 }
 
@@ -153,20 +175,27 @@ const displayedPages = computed(() => {
   return pages
 })
 
-// 초기 데이터 로드
+// 화면 크기 변경 감지
+const handleResize = () => {
+  fetchMovies() // 화면 크기 변경 시 다시 계산하고 가져오기
+}
+
 onMounted(() => {
-  fetchMovies(1)
+  fetchMovies()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
 <style scoped>
 .table-container {
-  height: 100vh;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow: hidden;
+  transition: height 0.3s ease;
+  overflow: visible;
+  position: relative;
+  margin-bottom: 20px;
 }
 
 table {
@@ -188,10 +217,10 @@ thead th {
 
 /* tbody 스타일 */
 tbody td {
-  padding: 12px;
+  padding: 10px;
   text-align: left;
   border-bottom: 1px solid #2c2c2c;
-  height: 140px;
+  height: 120px;
   vertical-align: top;
 }
 
@@ -223,8 +252,8 @@ th:nth-child(5), td:nth-child(5) { width: 80px; }  /* 평점 */
 th:nth-child(6), td:nth-child(6) { width: 150px; } /* 장르 */
 
 .poster-cell img {
-  width: 50px;
-  height: 75px;
+  width: 70px;
+  height: 100px;
   object-fit: cover;
   border-radius: 4px;
 }
@@ -242,16 +271,15 @@ th:nth-child(6), td:nth-child(6) { width: 150px; } /* 장르 */
 }
 
 .pagination {
-  padding: 20px 0;
-  background: #141414;
-  position: fixed; /* sticky 대신 fixed 사용 */
+  position: relative;
   bottom: 0;
   left: 0;
-  right: 0;
+  width: 100%;
+  padding: 15px 0;
   display: flex;
   justify-content: center;
-  align-items: center;
   gap: 10px;
+  z-index: 10;
 }
 
 .page-numbers {
@@ -276,4 +304,74 @@ th:nth-child(6), td:nth-child(6) { width: 150px; } /* 장르 */
 .page-btn.active {
   background-color: #535bf2;
 }
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  table {
+    table-layout: auto;
+  }
+
+  thead th:nth-child(n+3),
+  tbody td:nth-child(n+3) {
+    display: none; /* 포스터와 제목 외의 컬럼 숨김 */
+  }
+
+  th:nth-child(1),
+  td:nth-child(1) {
+    width: 50%; /* 포스터가 절반 너비 */
+  }
+
+  th:nth-child(2),
+  td:nth-child(2) {
+    width: 50%; /* 제목이 절반 너비 */
+  }
+
+  .poster-cell img {
+    width: 60px; /* 모바일에서 더 작게 */
+    height: 90px; /* 모일에서 더 작게 */
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .table-container {
+    padding: 10px;
+  }
+
+  .pagination {
+    padding: 10px 0;
+  }
+
+  .pagination button {
+    padding: 6px 12px;
+    font-size: 0.9em;
+  }
+
+  .movie-table td {
+    max-width: 400px; /* 설명 텍스트 최대 너비 제한 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap; /* 한 줄로 제한 */
+}
+}
+
+@media (max-height: 500px) {
+  .movie-table td {
+    padding: 5px;
+  }
+  .movie-poster {
+    width: 50px;
+    height: 75px;
+  }
+}
+
+@media (min-height: 501px) and (max-height: 760px) {
+  .movie-table td {
+    padding: 8px;
+  }
+  .movie-poster {
+    width: 60px;
+    height: 90px;
+  }
+}
+
 </style>

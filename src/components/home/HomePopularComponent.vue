@@ -64,7 +64,6 @@ import MovieInfiniteScroll from '@/components/views/MovieInfiniteScrollComponent
 import MovieTableView from '@/components/views/MovieTableView.vue'
 import URLService from '@/services/urlService'
 
-const apiKey = import.meta.env.VITE_TMDB_API_KEY
 const currentView = ref('grid')
 const showTopButton = ref(false)
 const infiniteScrollRef = ref(null)
