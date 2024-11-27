@@ -1,5 +1,19 @@
 <template>
   <div class="search-container">
+    <div class="filter-status" v-if="hasActiveFilters">
+      <div class="active-filters">
+        <span v-for="(value, key) in getActiveFilters"
+              :key="key"
+              class="filter-tag">
+          {{ value }}
+          <button @click="clearFilter(key)" class="clear-filter">×</button>
+        </span>
+      </div>
+      <button @click="resetAllFilters" class="reset-button">
+        필터 초기화
+      </button>
+    </div>
+
     <div class="dropdown-group">
       <div v-for="(options, key) in dropdowns" :key="key" class="dropdown">
         <button @click="toggleDropdown(key)" class="dropdown-button">
@@ -21,10 +35,31 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import createAPI from '@/services/apiService'
 
 const emit = defineEmits(['changeOptions'])
 const activeDropdown = ref(null)
+
+const genres = ref([])
+const loading = ref(false)
+
+const fetchGenres = async () => {
+  try {
+    loading.value = true
+    const api = createAPI()
+    const response = await api.get('/genre/movie/list')
+    genres.value = response.data.genres
+  } catch (error) {
+    console.error('Error fetching genres:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchGenres()
+})
 
 const dropdowns = {
   genre: [
@@ -139,6 +174,43 @@ function selectOption(key, option) {
     adult: selectedOptions.adult
   })
 }
+
+const initialFilters = {
+  genre: '장르 (전체)',
+  rating: '평점 (전체)',
+  language: '언어 (전체)',
+  year: '연도 (전체)',
+  sort: '정렬 (기본)',
+  runtime: '상영시간 (전체)',
+  adult: '성인물 제외'
+}
+
+const hasActiveFilters = computed(() => {
+  return Object.entries(selectedOptions).some(([key, value]) => {
+    return value !== initialFilters[key]
+  })
+})
+
+const getActiveFilters = computed(() => {
+  return Object.entries(selectedOptions)
+    .filter(([key, value]) => value !== initialFilters[key])
+    .reduce((acc, [key, value]) => {
+      acc[key] = value
+      return acc
+    }, {})
+})
+
+function clearFilter(key) {
+  selectedOptions[key] = initialFilters[key]
+  emit('changeOptions', selectedOptions)
+}
+
+function resetAllFilters() {
+  Object.keys(selectedOptions).forEach(key => {
+    selectedOptions[key] = initialFilters[key]
+  })
+  emit('changeOptions', selectedOptions)
+}
 </script>
 
 <style scoped>
@@ -236,5 +308,51 @@ function selectOption(key, option) {
     padding: 15px;
     font-size: 1.1rem;
   }
+}
+
+.filter-status {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-tag {
+  background: #444;
+  padding: 6px 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clear-filter {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.reset-button {
+  background: #535bf2;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.reset-button:hover {
+  background: #4347d9;
 }
 </style>
