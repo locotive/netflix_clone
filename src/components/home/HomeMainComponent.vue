@@ -4,7 +4,7 @@
 
     <MovieRow title="인기 영화" :fetchUrl="popularMoviesUrl" />
     <MovieRow title="최신 영화" :fetchUrl="newReleasesUrl" />
-    <MovieRow title="액션 영화" :fetchUrl="actionMoviesUrl" />
+    <MovieRow title="로맨스 영화" :fetchUrl="romanceMoviesUrl" />
     <MovieRow title="평점 높은 영화" :fetchUrl="topRatedMoviesUrl" />
     <MovieRow title="개봉 예정작" :fetchUrl="upcomingMoviesUrl" />
   </div>
@@ -21,7 +21,7 @@ const loading = ref(false)
 const error = ref(null)
 const popularMoviesUrl = ref('/movie/popular')
 const newReleasesUrl = ref('/movie/now_playing')
-const actionMoviesUrl = ref('/discover/movie?with_genres=28')
+const romanceMoviesUrl = ref('/discover/movie?with_genres=10749')
 const topRatedMoviesUrl = '/movie/top_rated'
 const upcomingMoviesUrl = '/movie/upcoming'
 
