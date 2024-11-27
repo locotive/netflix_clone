@@ -43,6 +43,10 @@
             <router-link to="/wishlist" @click="toggleMobileMenu">내가 찜한 리스트</router-link>
           </li>
           <li><router-link to="/search" @click="toggleMobileMenu">찾아보기</router-link></li>
+          <li><button class="logout-button" @click="handleLogout">
+            <font-awesome-icon icon="right-from-bracket" />
+            <span>로그아웃</span>
+          </button></li>
         </ul>
       </nav>
     </div>
@@ -52,6 +56,7 @@
 <script>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 export default {
   name: 'HeaderComponent',
@@ -60,6 +65,8 @@ export default {
     const isMobileMenuOpen = ref(false)
     const currentUser = ref(null)
     const router = useRouter()
+    const authStore = useAuthStore()
+    const rememberMe = ref(false)
 
     const handleScroll = () => {
       isScrolled.value = window.scrollY > 50
@@ -73,8 +80,21 @@ export default {
     }
 
     const handleLogout = () => {
-      localStorage.removeItem('currentUser')
+      // localStorage에서 Remember Me 상태 확인
+      const rememberMe = localStorage.getItem('rememberMe') === 'true'
+
+      if (!rememberMe) {
+        // Remember Me가 체크되지 않았을 때만 저장된 정보를 삭제
+        localStorage.removeItem('currentUser')
+        localStorage.removeItem('TMDb-Key')
+        localStorage.removeItem('rememberMe')
+      } else {
+        // Remember Me가 체크되어 있을 때는 인증 상태만 초기화
+        localStorage.removeItem('isAuthenticated')
+      }
+
       currentUser.value = null
+      authStore.logout()
       router.push('/signin')
     }
 
@@ -294,22 +314,40 @@ export default {
     display: block;
   }
 
-  .icon-button {
-    font-size: 0.75rem;
-    margin-left: 10px;
-  }
-
-  a {
-    text-align: left;
-    font-size: 1.15rem !important;
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .user-email {
     max-width: 120px;
   }
 
+  .logout-button {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: #e5e5e5;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    margin-left: auto;
+  }
+
   .logout-button span {
-    display: none;
+    display: inline;
+    margin-left: 0.5rem;
+  }
+
+  .mobile-nav .logout-button {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 10px 20px;
+    margin-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
 </style>
