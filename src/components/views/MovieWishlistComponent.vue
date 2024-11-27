@@ -177,7 +177,7 @@ function closeModal() {
 
 .movie-row {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 30px;
   margin: 0 auto 40px;
   width: 100%;
@@ -187,7 +187,8 @@ function closeModal() {
 }
 
 .movie-card {
-  width: calc(16.666% - 25px);
+  width: 300px;
+  min-width: 300px;
   margin: 0;
   transition: transform 0.3s;
   position: relative;
@@ -432,42 +433,28 @@ function closeModal() {
 
 @media (max-width: 1200px) {
   .movie-card {
-    width: calc(20% - 24px);
+    width: 300px;
   }
 }
 
 @media (max-width: 992px) {
   .movie-card {
-    width: calc(25% - 22.5px);
+    width: 300px;
   }
 }
 
 @media (max-width: 768px) {
   .movie-card {
-    width: calc(33.333% - 20px);
-  }
-  .movie-row {
-    gap: 20px;
-  }
-  .grid-container {
-    padding: 0 15px;
-  }
-  .remove-btn {
-    opacity: 1;
-    padding: 6px 10px;
-    font-size: 0.8em;
+    width: 300px;
   }
 }
 
 @media (max-width: 480px) {
   .movie-card {
-    width: calc(50% - 15px);
+    width: 300px;
   }
   .movie-row {
-    gap: 15px;
-  }
-  .grid-container {
-    padding: 0 10px;
+    justify-content: center;
   }
 }
 
