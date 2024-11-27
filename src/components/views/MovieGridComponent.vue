@@ -22,6 +22,7 @@
               loading="lazy"
             />
           </div>
+          <h3 class="movie-title">{{ movie.title }}</h3>
           <div v-if="isInWishlist(movie.id)" class="wishlist-badge">
             <span>👍</span>
           </div>
@@ -144,16 +145,17 @@
   }
 }
 
+
 .movie-card {
-  width: 300px;
-  min-width: 300px;
-  margin: 0;
-  transition: transform 0.3s;
+  width: calc(16.666% - 25px);
+  min-width: 200px;
+  margin: 0 0 20px 0;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .grid-container {
-  display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
   padding: 20px;
@@ -163,8 +165,11 @@
   display: flex;
   justify-content: center;
   gap: 30px;
+  margin: 0 auto 40px;
   width: 100%;
-  max-width: 1800px;
+  max-width: 2000px;
+  flex-wrap: wrap;
+  padding: 0 20px;
 }
 
 .grid-container.list .movie-row {
@@ -184,26 +189,27 @@
   margin-bottom: 10px;
 }
 
-.movie-card:hover {
-  transform: scale(1.05);
-  z-index: 2;
-}
-
-.movie-card:hover img {
-  transform: none;
+.movie-card img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 27/40;
+  border-radius: 8px;
+  object-fit: cover;
 }
 
 .movie-title {
-  margin-top: 8px;
+  margin: 8px 0;
   text-align: center;
-  font-size: 14px;
-  white-space: nowrap;
+  font-size: 0.9rem;
+  color: #fff;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 0 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  min-height: 2.4em;
   line-height: 1.2;
-  color: #fff;
-  transition: color 0.3s ease;
+  padding: 0 5px;
 }
 
 .movie-card:hover .movie-title {
@@ -431,21 +437,21 @@
 /* 모바일 대응 */
 @media (max-width: 1200px) {
   .grid-container {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 15px;
   }
 }
 
 @media (max-width: 992px) {
   .grid-container {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 15px;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .grid-container {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(1, 1fr);
     gap: 10px;
     padding: 10px;
   }
@@ -492,12 +498,12 @@
 .image-wrapper {
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s ease;
+  border-radius: 8px;
+  aspect-ratio: 2/3;
 }
 
 .movie-card:hover .image-wrapper {
-  transform: scale(1.1);
-  z-index: 2;
+  transform: none;
 }
 
 .wishlist-badge {
@@ -554,12 +560,12 @@
 .image-wrapper {
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s ease;
+  border-radius: 8px;
+  aspect-ratio: 2/3;
 }
 
 .movie-card:hover .image-wrapper {
-  transform: scale(1.1);
-  z-index: 2;
+  transform: none;
 }
 
 .loading-overlay {
@@ -582,7 +588,7 @@
 }
 
 .movie-card:hover {
-  transform: scale(1.1);
+  transform: scale(1.2);
   z-index: 1;
 }
 
