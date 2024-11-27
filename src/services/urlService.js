@@ -1,16 +1,10 @@
-import axios from 'axios'
+import createAPI from './apiService'
 
 export default {
   async fetchFeaturedMovie() {
-    // 환경 변수에서 apiKey 가져오기
-    const apiKey = import.meta.env.VITE_TMDB_API_KEY
-    console.log('API Key:', apiKey)
-
     try {
-      const response = await axios.get(
-        `https://api.themoviedb.org/3/movie/popular?api_key=${apiKey}&language=ko-KR`,
-      )
-      console.log(response.data.results[0])
+      const api = createAPI()
+      const response = await api.get('/movie/popular')
       return response.data.results[0]
     } catch (error) {
       console.error('Error fetching featured movie:', error)
@@ -18,29 +12,15 @@ export default {
   },
 
   getURL4PopularMovies() {
-    const apiKey = import.meta.env.VITE_TMDB_API_KEY
-    return `https://api.themoviedb.org/3/movie/popular?api_key=${apiKey}&language=ko-KR`
+    return '/movie/popular'
   },
 
   getURL4ReleaseMovies(page = 1) {
-    // 환경 변수에서 apiKey 가져오기
-    const apiKey = import.meta.env.VITE_TMDB_API_KEY
-    return `https://api.themoviedb.org/3/movie/now_playing?api_key=${apiKey}&language=ko-KR&page=${page}`
+    return `/movie/now_playing?page=${page}`
   },
 
   getURL4GenreMovies(genre, page = 1) {
-    // 환경 변수에서 apiKey 가져오기
-    const apiKey = import.meta.env.VITE_TMDB_API_KEY
-    return `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&with_genres=${genre}&language=ko-KR&page=${page}`
-  },
-
-  // runtime 범위를 urlService에 추가
-  runtimeRanges: {
-    '60분 이하': { lte: 60 },
-    '60-90분': { gte: 60, lte: 90 },
-    '90-120분': { gte: 90, lte: 120 },
-    '120-150분': { gte: 120, lte: 150 },
-    '150분 이상': { gte: 150 }
+    return `/discover/movie?with_genres=${genre}&page=${page}`
   },
 
   getFilteredMoviesURL({
@@ -53,13 +33,15 @@ export default {
     runtime = null,
     adult = false
   }) {
-    const apiKey = import.meta.env.VITE_TMDB_API_KEY
-    let url = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&language=ko-KR&page=${page}`
+    let url = '/discover/movie?'
 
     // 기본 필터: 한국 지역 기준
-    url += '&region=KR'
+    url += 'region=KR'
 
-    // 성인물 포함 여부 (한 번만 추가)
+    // 페이지 정보
+    url += `&page=${page}`
+
+    // 성인물 포함 여부
     url += `&include_adult=${adult}`
 
     // 장르 필터

@@ -2,7 +2,6 @@
   <div class="container-search">
     <MovieSearch @changeOptions="changeOptions" />
     <MovieInfiniteScroll
-      :apiKey="apiKey"
       :fetchUrl="getFilteredMoviesURL"
       :genreCode="genreId"
       :sortingOrder="sortId"
@@ -21,7 +20,6 @@ import MovieSearch from './MovieSearchComponent.vue'
 import MovieInfiniteScroll from '../views/MovieInfiniteScrollComponent.vue'
 import urlService from '@/services/urlService'
 
-const apiKey = import.meta.env.VITE_TMDB_API_KEY
 const genreId = ref('0')
 const voteAverageId = ref(-1)
 const sortId = ref('popularity.desc')

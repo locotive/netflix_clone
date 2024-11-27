@@ -48,7 +48,7 @@
         </div>
       </div>
     </div>
-    <div v-if="isLoading && movies.length > 0" class="loading-more">
+    <div v-if="isLoading" class="loading-indicator">
       <div class="loading-spinner"></div>
       <p>더 많은 영화를 불러오는 중...</p>
     </div>
@@ -106,19 +106,14 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import axios from 'axios'
-import urlService from '@/services/urlService'
+import createAPI from '@/services/apiService'
 import { useWishlist } from '@/services/wishlistService'
-import { faHeart, faInfoCircle, faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
+import { faInfoCircle, faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
 
 const props = defineProps({
-  apiKey: {
-    type: String,
-    required: true
-  },
   fetchUrl: {
     type: String,
-    required: true
+    required: true, // API 데이터를 가져올 기본 URL
   },
   genreCode: String,
   sortingOrder: String,
@@ -126,13 +121,13 @@ const props = defineProps({
   year: [String, Number],
   runtime: String,
   language: String,
-  adult: Boolean
+  adult: Boolean,
 })
+
 
 const movies = ref([])
 const currentPage = ref(1)
 const isLoading = ref(false)
-const hasMore = ref(true)
 
 const { isInWishlist, toggleWishlist } = useWishlist()
 
@@ -145,24 +140,12 @@ function formatDate(dateStr) {
   })
 }
 
-// URL 생성 함수
 const getFinalUrl = (page) => {
-  if (!props.fetchUrl) {
-    // 기본 URL 생성 (검색 페이지용)
-    return urlService.getFilteredMoviesURL({
-      page,
-      genre: props.genreCode,
-      rating: props.voteAverage,
-      language: props.language,
-      year: props.year,
-      sortBy: props.sortingOrder,
-      runtime: props.runtime,
-      adult: props.adult
-    })
-  }
-  // Popular 페이지용 URL
-  return `${props.fetchUrl}&page=${page}`
-}
+  // 기본 URL에서 중복된 파라미터를 방지합니다.
+  const baseUrl = props.fetchUrl.includes('api_key=') ? props.fetchUrl : `${props.fetchUrl}&api_key=${props.apiKey}`;
+
+  return `${baseUrl}&page=${page}&language=ko-KR`;
+};
 
 // 영화 데이터 로드 함수 수정
 const loadMovies = async () => {
@@ -173,7 +156,9 @@ const loadMovies = async () => {
     const url = getFinalUrl(currentPage.value)
     console.log('Loading movies from URL:', url)
 
-    const response = await axios.get(url)
+    // props.apiKey로 API 인스턴스 생성
+    const api = createAPI()
+    const response = await api.get(props.fetchUrl)
 
     if (response.data && response.data.results) {
       const newMovies = response.data.results
@@ -190,6 +175,7 @@ const loadMovies = async () => {
     isLoading.value = false
   }
 }
+
 
 // props가 변경될 때 데이터 리로드
 watch(
@@ -211,7 +197,6 @@ watch(
 )
 
 const gridContainer = ref(null)
-const observer = ref(null)
 
 // 스크롤 감지 함수 추가
 const handleScroll = () => {
@@ -243,16 +228,19 @@ const selectedMovie = ref(null)
 
 async function showMovieDetails(movie) {
   try {
-    console.log('Fetching movie details for:', movie.id);
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=ko-KR`
-    );
-    console.log('Movie details response:', response.data);
-    selectedMovie.value = response.data;
+    console.log('Fetching movie details for:', movie.id)
+
+    // props.apiKey 전달
+    const api = createAPI(props.apiKey)
+    const response = await api.get(`/movie/${movie.id}`)
+
+    console.log('Movie details response:', response.data)
+    selectedMovie.value = response.data
   } catch (error) {
-    console.error('Error fetching movie details:', error);
+    console.error('Error fetching movie details:', error)
   }
 }
+
 
 function closeModal() {
   selectedMovie.value = null
@@ -262,10 +250,6 @@ function handleInfoClick(event, movie) {
   event.stopPropagation()
   hideTooltip()
   showMovieDetails(movie)
-}
-
-function getImageUrl(path) {
-  return `https://image.tmdb.org/t/p/w500${path}`
 }
 
 // 이미지 로드 관련 디버깅
@@ -418,6 +402,8 @@ img {
 
 img.loaded {
   opacity: 1;
+  width: 100%;
+  height: 100%;
 }
 
 @keyframes spin {
@@ -488,6 +474,7 @@ img.loaded {
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 6;
+  line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -522,16 +509,97 @@ img.loaded {
   }
 
   .movie-item {
+    display: flex;
     flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #333; /* 배경 추가 */
+    border-radius: 8px;
   }
 
-  .movie-item img {
-    width: 100%;
-    height: auto;
+  .poster-container {
+    position: relative;
+    width: 100%; /* 컨테이너 전체 너비 */
+    aspect-ratio: 2 / 3; /* 포스터 비율 유지 */
+    background: #1a1a1a;
+  }
+
+  .movie-poster {
+    width: 100%; /* 컨테이너 너비에 맞게 */
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .wishlist-badge {
+    position: absolute;
+    top: 8px; /* 찜 버튼 위치 */
+    right: 8px;
+    background: rgba(229, 9, 20, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: bold;
+    z-index: 2;
   }
 
   .movie-info {
-    padding: 15px;
+    width: 100%; /* 텍스트가 전체 너비를 차지 */
+    font-size: 0.9em;
+    text-align: center; /* 가운데 정렬 */
+    padding: 10px 0;
+  }
+
+  .movie-info h3 {
+    font-size: 1.1em;
+    margin-bottom: 8px;
+  }
+
+  .meta-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9em;
+    color: #aaa;
+  }
+
+  .overview {
+    font-size: 0.9em;
+    color: #ddd;
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .movie-item {
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .poster-container {
+    width: 100%; /* 480px 이하에서도 컨테이너 전체 너비 */
+  }
+
+  .wishlist-badge {
+    top: 5px; /* 버튼 위치 조금 더 조정 */
+    right: 5px;
+    font-size: 0.8em;
+    padding: 3px 6px;
+  }
+
+  .movie-info {
+    font-size: 0.8em;
+    padding: 5px 0;
+  }
+
+  .movie-info h3 {
+    font-size: 1em;
+  }
+
+  .overview {
+    font-size: 0.8em;
   }
 }
 
@@ -568,6 +636,7 @@ img.loaded {
     justify-content: flex-start;
   }
 }
+
 
 /* 모달 관련 스타일 추가 */
 .movie-modal {
@@ -740,5 +809,27 @@ img.loaded {
   pointer-events: none;
   white-space: nowrap;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  color: #fff;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>

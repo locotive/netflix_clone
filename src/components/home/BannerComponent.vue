@@ -438,4 +438,36 @@ function closeModal() {
     transform: rotate(360deg);
   }
 }
+
+@media (max-width: 768px) {
+  .banner {
+    width: 100%;
+    height: 40vh;
+  }
+
+  .banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+  }
+
+  .banner:hover .banner-content {
+    opacity: 1;
+  }
+
+  .banner-content .overview {
+    display: none;
+  }
+
+  .movie-title {
+    color: white;
+    font-size: 1.8rem;
+    text-align: center;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 8px;
+    margin: 0;
+  }
+}
 </style>

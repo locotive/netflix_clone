@@ -144,21 +144,18 @@
   }
 }
 
-.movie-grid {
-  width: 100%;
-  height: calc(100vh - 200px);
-  margin-bottom: 40px;
-  margin-top: 30px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+.movie-card {
+  width: 300px;
+  min-width: 300px;
+  margin: 0;
+  transition: transform 0.3s;
+  position: relative;
 }
 
 .grid-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
   padding: 20px;
 }
 
@@ -176,10 +173,8 @@
 
 .movie-card {
   position: relative;
-  width: calc(16.666% - 25px);
-  margin: 0;
-  transition: transform 0.3s;
-  cursor: pointer;
+  min-width: 200px;
+  aspect-ratio: 2/3;
 }
 
 .grid-container.list .movie-card {
@@ -434,31 +429,35 @@
 }
 
 /* 모바일 대응 */
-@media (max-width: 768px) {
-  .modal-main-info {
-    grid-template-columns: 1fr;
-  }
-
-  .modal-poster {
-    width: 200px;
-    margin: 0 auto;
-  }
-
-  .modal-text-content h2.movie-title {
-    font-size: 1.8em;
-  }
-
-  .modal-body {
-    margin-top: 60px;
-    padding: 20px;
-  }
-
-  .movie-row {
+@media (max-width: 1200px) {
+  .grid-container {
+    grid-template-columns: repeat(4, 1fr);
     gap: 15px;
+  }
+}
+
+@media (max-width: 992px) {
+  .grid-container {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 10px;
   }
 
   .movie-card {
-    width: calc(33.333% - 10px);
+    min-width: 140px;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-container {
+    padding: 5px;
   }
 }
 
@@ -575,7 +574,25 @@
   background: #1a1a1a;
   z-index: 1;
 }
+.movie-card {
+  width: calc(16.666% - 25px);
+  margin: 0;
+  transition: transform 0.3s;
+  position: relative;
+}
 
+.movie-card:hover {
+  transform: scale(1.1);
+  z-index: 1;
+}
+
+.movie-card img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 27/40;
+  border-radius: 8px;
+  object-fit: cover;
+}
 .loading-spinner {
   width: 40px;
   height: 40px;
@@ -584,18 +601,41 @@
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
+
+@media (max-width: 768px) {
+  .grid-actions {
+    opacity: 1;
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    transform: none;
+  }
+
+  .movie-card:hover .grid-actions {
+    transform: none;
+  }
+
+  .grid-info-btn {
+    padding: 6px 12px;
+    font-size: 0.8em;
+    background: rgba(180, 180, 180, 0.9);
+  }
+}
 </style>
 
 <script setup>
-import { ref, onMounted, onUnmounted, onBeforeUnmount, computed } from 'vue'
-import axios from 'axios'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import createAPI from '@/services/apiService'
 import { useWishlist } from '@/services/wishlistService'
 import { faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
 import { useMovieUtils } from '@/composables/useMovieUtils'
 import { movieService } from '@/services/api/movieService'
 
 const props = defineProps({
-  fetchUrl: String,
+  fetchUrl: {
+    type: String,
+    required: true
+  }
 })
 
 const gridContainer = ref(null)
@@ -608,13 +648,11 @@ const currentView = ref('grid')
 const { toggleWishlist, isInWishlist } = useWishlist()
 const { isMobile, isLoading, getImageUrl, cleanup } = useMovieUtils()
 
-// Fetch movies
-async function fetchMovies(page = 1) {
-  if (isLoading.value) return
-
+const fetchMovies = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(props.fetchUrl)
+    const api = createAPI()
+    const response = await api.get(props.fetchUrl)
     movies.value = response.data.results
   } catch (error) {
     console.error('Error fetching movies:', error)

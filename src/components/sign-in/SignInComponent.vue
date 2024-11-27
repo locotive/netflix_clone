@@ -1,5 +1,10 @@
 <template>
   <div>
+    <TermsComponent
+      :is-visible="showTerms"
+      @accept="handleTermsAccept"
+      @close="showTerms = false"
+    />
     <div class="bg-image"></div>
     <div class="container">
       <div id="phone">
@@ -15,6 +20,7 @@
                   v-model="email"
                   @focus="focusInput('email')"
                   @blur="blurInput('email')"
+                  required
                 />
                 <label for="email">Username or Email</label>
               </div>
@@ -25,6 +31,7 @@
                   v-model="password"
                   @focus="focusInput('password')"
                   @blur="blurInput('password')"
+                  required
                 />
                 <label for="password">Password</label>
               </div>
@@ -35,10 +42,10 @@
               <span class="checkbox forgot">
                 <a href="#">Forgot Password?</a>
               </span>
-              <button :disabled="!isLoginFormValid">Login</button>
+              <button type="submit" :disabled="!email || !password">Login</button>
             </form>
-            <a href="javascript:void(0)" class="account-check" @click="toggleCard"
-              >Already have an account? <b>Sign in</b></a
+            <a href="javascript:void(0)" class="account-check" @click="toggleForm"
+              >Don't have an account? <b>Sign up</b></a
             >
           </div>
 
@@ -53,6 +60,7 @@
                   v-model="registerEmail"
                   @focus="focusInput('registerEmail')"
                   @blur="blurInput('registerEmail')"
+                  required
                 />
                 <label for="register-email">Email</label>
               </div>
@@ -63,6 +71,7 @@
                   v-model="registerPassword"
                   @focus="focusInput('registerPassword')"
                   @blur="blurInput('registerPassword')"
+                  required
                 />
                 <label for="register-password">Password</label>
               </div>
@@ -73,17 +82,20 @@
                   v-model="confirmPassword"
                   @focus="focusInput('confirmPassword')"
                   @blur="blurInput('confirmPassword')"
+                  required
                 />
                 <label for="confirm-password">Confirm Password</label>
               </div>
               <span class="checkbox remember">
-                <input type="checkbox" id="terms" v-model="acceptTerms" />
-                <label for="terms" class="read-text">I have read <b>Terms and Conditions</b></label>
+                <input type="checkbox" id="terms" v-model="acceptTerms" required />
+                <label for="terms" class="read-text">
+                  I have read <b @click.prevent="showTerms = true" style="cursor: pointer">Terms and Conditions</b>
+                </label>
               </span>
-              <button :disabled="!isRegisterFormValid">Register</button>
+              <button type="submit">Register</button>
             </form>
-            <a href="javascript:void(0)" class="account-check" @click="toggleCard"
-              >Don't have an account? <b>Sign up</b></a
+            <a href="javascript:void(0)" class="account-check" @click="toggleForm"
+              >Already have an account? <b>Sign in</b></a
             >
           </div>
         </div>
@@ -92,87 +104,197 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useToast } from 'vue-toastification'
+import TermsComponent from './TermsComponent.vue'
 
-export default {
-  name: 'SignInComponent',
-  setup() {
-    const isLoginVisible = ref(true)
-    const email = ref('')
-    const password = ref('')
-    const registerEmail = ref('')
-    const registerPassword = ref('')
-    const confirmPassword = ref('')
-    const rememberMe = ref(false)
-    const acceptTerms = ref(false)
-    const isEmailFocused = ref(false)
-    const isPasswordFocused = ref(false)
-    const isRegisterEmailFocused = ref(false)
-    const isRegisterPasswordFocused = ref(false)
-    const isConfirmPasswordFocused = ref(false)
+const router = useRouter()
+const toast = useToast()
+const authStore = useAuthStore()
 
-    const toggleCard = () => {
-      isLoginVisible.value = !isLoginVisible.value
+const email = ref('')
+const password = ref('')
+const registerEmail = ref('')
+const registerPassword = ref('')
+const confirmPassword = ref('')
+const rememberMe = ref(false)
+const acceptTerms = ref(false)
+const isLoginVisible = ref(true)
+const isEmailFocused = ref(false)
+const isPasswordFocused = ref(false)
+const showTerms = ref(false)
+
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+const handleLogin = async () => {
+  if (!email.value.trim() || !password.value.trim()) {
+    toast.error('이메일과 비밀번호를 모두 입력해주세요.');
+    return;
+  }
+
+  console.log('로그인 시도:', {
+    email: email.value,
+    password: password.value,
+    rememberMe: rememberMe.value,
+  });
+
+  // 이메일 유효성 검사
+  if (!validateEmail(email.value)) {
+    toast.error('유효한 이메일을 입력해주세요.');
+    return;
+  }
+
+  try {
+    // 저장된 사용자 데이터 가져오기
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const user = users.find((u) => u.email === email.value);
+
+    // 사용자 확인
+    if (!user) {
+      toast.error('등록되지 않은 이메일입니다.');
+      return;
     }
 
-    const focusInput = (inputName) => {
-      if (inputName === 'email') isEmailFocused.value = true
-      if (inputName === 'password') isPasswordFocused.value = true
-      if (inputName === 'registerEmail') isRegisterEmailFocused.value = true
-      if (inputName === 'registerPassword') isRegisterPasswordFocused.value = true
-      if (inputName === 'confirmPassword') isConfirmPasswordFocused.value = true
+    // 비밀번호(API 키) 확인
+    if (user.apiKey !== password.value) {
+      toast.error('비밀번호가 일치하지 않습니다.');
+      return;
     }
 
-    const blurInput = (inputName) => {
-      if (inputName === 'email') isEmailFocused.value = false
-      if (inputName === 'password') isPasswordFocused.value = false
-      if (inputName === 'registerEmail') isRegisterEmailFocused.value = false
-      if (inputName === 'registerPassword') isRegisterPasswordFocused.value = false
-      if (inputName === 'confirmPassword') isConfirmPasswordFocused.value = false
+    // API 키 유효성 검사
+    const testResponse = await fetch(
+      `https://api.themoviedb.org/3/movie/popular?api_key=${password.value}`
+    );
+
+    if (testResponse.status !== 200) {
+      toast.warning('API 키가 유효하지 않습니다. 기본 상태로 로그인합니다.');
+    } else {
+      toast.success('API 키가 유효합니다.');
     }
 
-    const isLoginFormValid = ref(() => email.value && password.value)
-    const isRegisterFormValid = ref(
-      () =>
-        registerEmail.value &&
-        registerPassword.value &&
-        confirmPassword.value &&
-        registerPassword.value === confirmPassword.value &&
-        acceptTerms.value,
-    )
+    // 로그인 처리: Pinia 스토어와 LocalStorage에 정보 저장
+    authStore.login(password.value); // Pinia 스토어에 비밀번호(API 키) 저장
+    localStorage.setItem(
+      'currentUser',
+      JSON.stringify({
+        email: user.email,
+        apiKey: password.value, // 비밀번호(API 키)를 그대로 저장
+      })
+    );
 
-    const handleLogin = () => {
-      console.log('Login attempt with', email.value, password.value)
+    console.log('로그인 성공:', {
+      isAuthenticated: authStore.isAuthenticated,
+      apiKey: authStore.apiKey,
+    });
+
+    toast.success('로그인되었습니다.');
+    await router.push('/'); // 홈 화면으로 이동
+  } catch (error) {
+    // 에러 처리
+    console.error('로그인 실패:', error);
+    toast.error('로그인 처리 중 오류가 발생했습니다.');
+  }
+};
+
+
+const handleRegister = async () => {
+  console.log('회원가입 시도:', {
+    registerEmail: registerEmail.value,
+    registerPassword: registerPassword.value,
+    confirmPassword: confirmPassword.value,
+    acceptTerms: acceptTerms.value
+  });
+
+  // 입력값 확인
+  if (!registerEmail.value.trim()) {
+    toast.error('이메일을 입력해주세요.');
+    return;
+  }
+
+  if (!registerPassword.value.trim()) {
+    toast.error('비밀번호를 입력해주세요.');
+    return;
+  }
+
+  if (!confirmPassword.value.trim()) {
+    toast.error('비밀번호 확인을 입력해주세요.');
+    return;
+  }
+
+  // 이메일 유효성 검사
+  if (!validateEmail(registerEmail.value)) {
+    toast.error('유효한 이메일을 입력해주세요.');
+    return;
+  }
+
+  // 비밀번호와 비밀번호 확인 값 일치 확인
+  if (registerPassword.value !== confirmPassword.value) {
+    toast.error('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
+    return;
+  }
+
+  // 약관 동의 확인
+  if (!acceptTerms.value) {
+    toast.error('이용약관에 동의해주세요.');
+    return;
+  }
+
+  try {
+    // 사용자 데이터 가져오기
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+
+    // 이메일 중복 확인
+    if (users.some((u) => u.email === registerEmail.value)) {
+      toast.error('이미 등록된 이메일입니다.');
+      return;
     }
 
-    const handleRegister = () => {
-      console.log('Register attempt with', registerEmail.value, registerPassword.value)
-    }
+    // 새로운 사용자 추가
+    users.push({
+      email: registerEmail.value,
+      apiKey: registerPassword.value, // 비밀번호를 API 키로 저장
+    });
+    localStorage.setItem('users', JSON.stringify(users));
 
-    return {
-      isLoginVisible,
-      email,
-      password,
-      registerEmail,
-      registerPassword,
-      confirmPassword,
-      rememberMe,
-      acceptTerms,
-      isEmailFocused,
-      isPasswordFocused,
-      isRegisterEmailFocused,
-      isRegisterPasswordFocused,
-      isConfirmPasswordFocused,
-      toggleCard,
-      focusInput,
-      blurInput,
-      isLoginFormValid,
-      isRegisterFormValid,
-      handleLogin,
-      handleRegister,
-    }
-  },
+    toast.success('회원가입이 완료되었습니다.');
+    isLoginVisible.value = true;
+    email.value = registerEmail.value;
+
+    // 폼 초기화
+    registerEmail.value = '';
+    registerPassword.value = '';
+    confirmPassword.value = '';
+    acceptTerms.value = false;
+  } catch (error) {
+    console.error('회원가입 에러:', error);
+    toast.error('회원가입 처리 중 오류가 발생했습니다.');
+  }
+};
+
+
+const focusInput = (inputName) => {
+  if (inputName === 'email') isEmailFocused.value = true
+  if (inputName === 'password') isPasswordFocused.value = true
+}
+
+const blurInput = (inputName) => {
+  if (inputName === 'email') isEmailFocused.value = false
+  if (inputName === 'password') isPasswordFocused.value = false
+}
+
+const toggleForm = () => {
+  isLoginVisible.value = !isLoginVisible.value
+}
+
+const handleTermsAccept = () => {
+  acceptTerms.value = true
+  showTerms.value = false
 }
 </script>
 
