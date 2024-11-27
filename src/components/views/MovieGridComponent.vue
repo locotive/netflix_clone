@@ -648,7 +648,7 @@ const gridContainer = ref(null)
 const movies = ref([])
 const currentPage = ref(1)
 const rowSize = ref(4)
-const moviesPerPage = ref(20)
+const moviesPerPage = ref(24)
 const currentView = ref('grid')
 
 const { toggleWishlist, isInWishlist } = useWishlist()
@@ -658,8 +658,12 @@ const fetchMovies = async () => {
   try {
     isLoading.value = true
     const api = createAPI()
-    const response = await api.get(props.fetchUrl)
-    movies.value = response.data.results
+    const requests = Array.from({ length: 10 }, (_, i) => i + 1).map(page =>
+      api.get(props.fetchUrl, { params: { page } })
+    )
+    const responses = await Promise.all(requests)
+
+    movies.value = responses.flatMap(response => response.data.results)
   } catch (error) {
     console.error('Error fetching movies:', error)
   } finally {
@@ -693,7 +697,7 @@ function prevPage() {
 function calculateLayout() {
   if (gridContainer.value) {
     rowSize.value = isMobile.value ? 3 : 6
-    const numberOfRows = 3
+    const numberOfRows = 4
     moviesPerPage.value = rowSize.value * numberOfRows
   }
 }
