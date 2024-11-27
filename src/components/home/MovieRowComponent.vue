@@ -361,6 +361,40 @@ function closeModal() {
   transform: scale(1.1);
 }
 
+.movie-row {
+  margin-bottom: 40px;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.movie-row h2 {
+  text-align: left;
+  margin-left: 10px;
+  margin-top: 15px;
+  margin-bottom: 10px;
+}
+
+.slider-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding: 0 20px;  /* 좌우 여백 추가 */
+}
+
+.slider-window {
+  overflow: hidden;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.movie-slider {
+  display: flex;
+  transition: transform 0.3s ease;
+  gap: 10px;  /* 카드 간격 추가 */
+}
+
 .slider-button {
   position: absolute;
   top: 50%;
@@ -580,5 +614,34 @@ function closeModal() {
   font-size: 1rem;
   font-weight: 500;
   z-index: 3;
+}
+
+@media (max-width: 768px) {
+  .movie-row {
+    width: 80%;
+    margin: 0 auto;
+    padding: 20px 0;
+  }
+
+  .slider-container {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .movie-slider {
+    display: flex;
+    transition: transform 0.3s ease;
+  }
+
+  .movie-card {
+    flex: 0 0 100%;
+    padding: 0 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .movie-row {
+    width: 90%;
+  }
 }
 </style>
