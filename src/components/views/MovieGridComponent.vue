@@ -575,7 +575,25 @@
   background: #1a1a1a;
   z-index: 1;
 }
+.movie-card {
+  width: calc(16.666% - 25px);
+  margin: 0;
+  transition: transform 0.3s;
+  position: relative;
+}
 
+.movie-card:hover {
+  transform: scale(1.1);
+  z-index: 1;
+}
+
+.movie-card img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 27/40;
+  border-radius: 8px;
+  object-fit: cover;
+}
 .loading-spinner {
   width: 40px;
   height: 40px;
@@ -587,15 +605,18 @@
 </style>
 
 <script setup>
-import { ref, onMounted, onUnmounted, onBeforeUnmount, computed } from 'vue'
-import axios from 'axios'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import createAPI from '@/services/apiService'
 import { useWishlist } from '@/services/wishlistService'
 import { faTimes, faStar } from '@fortawesome/free-solid-svg-icons'
 import { useMovieUtils } from '@/composables/useMovieUtils'
 import { movieService } from '@/services/api/movieService'
 
 const props = defineProps({
-  fetchUrl: String,
+  fetchUrl: {
+    type: String,
+    required: true
+  }
 })
 
 const gridContainer = ref(null)
@@ -608,13 +629,11 @@ const currentView = ref('grid')
 const { toggleWishlist, isInWishlist } = useWishlist()
 const { isMobile, isLoading, getImageUrl, cleanup } = useMovieUtils()
 
-// Fetch movies
-async function fetchMovies(page = 1) {
-  if (isLoading.value) return
-
+const fetchMovies = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(props.fetchUrl)
+    const api = createAPI()
+    const response = await api.get(props.fetchUrl)
     movies.value = response.data.results
   } catch (error) {
     console.error('Error fetching movies:', error)
