@@ -32,7 +32,14 @@ jobs:
         env:
           VITE_KAKAO_CLIENT_ID: ${{ secrets.VITE_KAKAO_CLIENT_ID }}
           VITE_TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
-        run: npm run build
+          VITE_KAKAO_REDIRECT_URI: 'https://locotive.github.io/netflix_clone/oauth/callback/kakao'
+          VITE_API_BASE_URL: 'https://locotive.github.io'
+        run: |
+          echo "VITE_KAKAO_CLIENT_ID=$VITE_KAKAO_CLIENT_ID" >> .env.production
+          echo "VITE_TMDB_API_KEY=$VITE_TMDB_API_KEY" >> .env.production
+          echo "VITE_KAKAO_REDIRECT_URI=$VITE_KAKAO_REDIRECT_URI" >> .env.production
+          echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" >> .env.production
+          npm run build
         
       - name: Setup Pages
         uses: actions/configure-pages@v3
