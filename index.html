@@ -9,7 +9,9 @@
       (function() {
         const redirect = sessionStorage.redirect;
         delete sessionStorage.redirect;
-        if (redirect && redirect !== location.href) {
+        
+        if (redirect) {
+          console.log('index.html - 저장된 리다이렉트 경로:', redirect);
           history.replaceState(null, null, redirect);
         }
       })();
