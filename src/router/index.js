@@ -42,6 +42,11 @@ const router = createRouter({
       ]
     },
     {
+      path: '/oauth',
+      name: 'oauth',
+      component: () => import('@/views/OAuthCallback.vue')
+    },
+    {
       path: '/oauth/callback/kakao',
       name: 'KakaoCallback',
       component: KakaoCallback,
