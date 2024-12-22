@@ -193,9 +193,13 @@ onMounted(() => {
 })
 
 const handleLogin = async () => {
-  // 이메일 검증
   if (!email.value) {
     toast.error('이메일을 입력해주세요')
+    return
+  }
+
+  if (!password.value) {
+    toast.error('비밀번호를 입력해주세요')
     return
   }
 
@@ -206,13 +210,7 @@ const handleLogin = async () => {
     return
   }
 
-  // 비밀번호 검증
-  if (!password.value) {
-    toast.error('비밀번호를 입력해주세요')
-    return
-  }
-
-  // 모든 검증을 통과하면 로그인 처리
+  // 비든 검증을 통과하면 로그인 처리
   try {
     const users = JSON.parse(localStorage.getItem('users') || '[]')
     const user = users.find((u) => u.email === email.value)
@@ -884,5 +882,25 @@ button:hover {
   color: #e87c03;
   font-size: 13px;
   margin-top: 6px;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 5px;
+  background-color: #2069ff;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.login-btn:hover {
+  background-color: #2196F3;
+}
+
+.login-btn:active {
+  transform: scale(0.98);
 }
 </style>
