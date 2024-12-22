@@ -12,6 +12,12 @@ Vue.js를 사용하여 제작한 영화 스트리밍 데모 사이트입니다. 
   - 개봉 예정작 목록
   - 장르별 영화 목록
 
+- **영셜 로그인**
+  - 카카오 로그인 연동
+  - 프로필 정보 표시
+  - 로그인 상태 유지
+  - 로그아웃 기능
+
 - **영화 검색 및 필터링**
   - 장르별 필터링
   - 평점 기반 필터링
@@ -34,7 +40,8 @@ Vue.js를 사용하여 제작한 영화 스트리밍 데모 사이트입니다. 
 - **API 통신**: Axios
 - **스타일링**: SCSS, CSS
 - **라우팅**: Vue Router
-- **API**: TMDB API
+- **API**: TMDB API, Kakao Login API
+- **환경 변수 관리**: dotenv
 
 ## 📦 설치 및 실행
 
@@ -43,24 +50,34 @@ Vue.js를 사용하여 제작한 영화 스트리밍 데모 사이트입니다. 
 git clone [repository-url]
 ```
 
-2. 의존성 설치
+2. 환경 변수 설정
+`.env.development` 또는 `.env.production` 파일 생성:
+```plaintext
+IP_ADDRESS=localhost
+PORT=5173 # 개발환경
+VITE_KAKAO_CLIENT_ID=YOUR_KAKAO_CLIENT_ID
+VITE_KAKAO_REDIRECT_URI=http://localhost:5173/netflix_clone/oauth/callback/kakao
+VITE_TMDB_API_KEY=YOUR_TMDB_API_KEY
+VITE_API_BASE_URL=http://localhost:5173
+
+VITE_API_TIMEOUT=5000
+VITE_MAX_RETRIES=3
+VITE_LOG_LEVEL=debug
+VITE_TMDB_IMAGE_BASE_URL=https://image.tmdb.org/t/p
+VITE_TMDB_API_VERSION=3
+VITE_STORAGE_PREFIX=netflix_clone_dev_
+```
+
+3. 의존성 설치
 ```bash
 npm install
 ```
 
-3. 개발 서버 실행
+4. 개발 서버 실행
 ```bash
-npm run dev
-```
-
-4. 로그인
-- http://localhost:5173/netflix_clone/
-- 회원가입 시 입력한 비밀번호가 TMDB API 키로 사용됩니다
-- 유효한 TMDB API 키를 비밀번호로 사용해주세요
-
-5. 빌드
-```bash
-npm run build
+npm run dev # 개발 환경
+npm run build:prod # 프로덕션 빌드
+npm run preview:prod # 프로덕션 미리보기
 ```
 
 ## 📁 프로젝트 구조
@@ -128,7 +145,20 @@ docs/
 
 프로젝트 실행을 위해 다음 환경 변수가 필요합니다:
 
+### 개발 환경 (.env.development)
 - `VITE_TMDB_API_KEY`: TMDB API 키
+- `VITE_KAKAO_CLIENT_ID`: 카카오 로그인 API 키
+- `VITE_KAKAO_REDIRECT_URI`: 카카오 로그인 리다이렉트 URI
+- 기타 환경 설정 변수들
+
+### 프로덕션 환경 (.env.production)
+- 개발 환경과 동일한 변수들 (다른 값 설정)
+
+## 🔐 보안
+
+- API 키는 절대 GitHub에 커밋하지 않습니다
+- 환경 변수 파일은 .gitignore에 포함되어 있습니다
+- 프로덕션 배포 시 환경 변수는 배포 플랫폼에서 별도 설정
 
 ## 📱 반응형 디자인
 

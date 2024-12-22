@@ -34,6 +34,12 @@ jobs:
           VITE_TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
           VITE_KAKAO_REDIRECT_URI: 'https://locotive.github.io/netflix_clone/oauth/callback/kakao'
           VITE_API_BASE_URL: 'https://locotive.github.io'
+          VITE_API_TIMEOUT: '3000'
+          VITE_MAX_RETRIES: '1'
+          VITE_LOG_LEVEL: 'error'
+          VITE_TMDB_IMAGE_BASE_URL: 'https://image.tmdb.org/t/p'
+          VITE_TMDB_API_VERSION: '3'
+          VITE_STORAGE_PREFIX: 'netflix_clone_prod_'
         run: |
           echo "=== 환경 변수 확인 ==="
           echo "VITE_KAKAO_CLIENT_ID 존재 여부: $([[ ! -z "$VITE_KAKAO_CLIENT_ID" ]] && echo "YES" || echo "NO")"
@@ -46,6 +52,12 @@ jobs:
           echo "VITE_TMDB_API_KEY=$VITE_TMDB_API_KEY" >> .env.production
           echo "VITE_KAKAO_REDIRECT_URI=$VITE_KAKAO_REDIRECT_URI" >> .env.production
           echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" >> .env.production
+          echo "VITE_API_TIMEOUT=3000" >> .env.production
+          echo "VITE_MAX_RETRIES=1" >> .env.production
+          echo "VITE_LOG_LEVEL=error" >> .env.production
+          echo "VITE_TMDB_IMAGE_BASE_URL=https://image.tmdb.org/t/p" >> .env.production
+          echo "VITE_TMDB_API_VERSION=3" >> .env.production
+          echo "VITE_STORAGE_PREFIX=netflix_clone_prod_" >> .env.production
           
           echo "=== .env.production 파일 내용 확인 ==="
           cat .env.production | grep -v "KEY\|ID"
@@ -63,4 +75,4 @@ jobs:
           
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2 
+        uses: actions/deploy-pages@v2
