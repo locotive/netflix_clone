@@ -1,5 +1,8 @@
 <template>
-  <div>로그인 처리중...</div>
+  <div class="loading-container">
+    <div class="loading-spinner"></div>
+    <div>로그인 처리중...</div>
+  </div>
 </template>
 
 <script setup>
@@ -17,7 +20,6 @@ onMounted(async () => {
 
   if (code) {
     try {
-      // 카카오 토큰 받기
       const response = await fetch('https://kauth.kakao.com/oauth/token', {
         method: 'POST',
         headers: {
@@ -31,25 +33,29 @@ onMounted(async () => {
         }),
       });
 
-      const tokenData = await response.json();
+      if (!response.ok) {
+        throw new Error('토큰 요청 실패');
+      }
 
-      // 사용자 정보 가져오기
+      const tokenData = await response.json();
       const userResponse = await fetch('https://kapi.kakao.com/v2/user/me', {
         headers: {
           Authorization: `Bearer ${tokenData.access_token}`,
         },
       });
 
-      const userData = await userResponse.json();
+      if (!userResponse.ok) {
+        throw new Error('사용자 정보 요청 실패');
+      }
 
-      // store에 로그인 정보 저장
-      authStore.kakaoLogin(tokenData.access_token, userData);
+      const userData = await userResponse.json();
+      await authStore.kakaoLogin(tokenData.access_token, userData);
 
       toast.success('카카오 로그인 성공!');
       router.push('/');
     } catch (error) {
       console.error('카카오 로그인 에러:', error);
-      toast.error('로그인 처리 중 오류가 발생했습니다.');
+      toast.error(error.message || '로그인 처리 중 오류가 발생했습니다.');
       router.push('/signin');
     }
   } else {
@@ -58,3 +64,28 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 1rem;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #2069ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>

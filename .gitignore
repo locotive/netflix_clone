@@ -33,4 +33,3 @@ get-source-code.ps1
 
 .env
 .env.development
-.env.production

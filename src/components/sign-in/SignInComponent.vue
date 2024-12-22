@@ -11,7 +11,7 @@
         <div id="content-wrapper">
           <!-- 로그인 폼 -->
           <div :class="['card', { hidden: !isLoginVisible }]" id="login">
-            <form @submit.prevent="handleLogin">
+            <form @submit.prevent="handleLogin" novalidate>
               <h1>Sign in</h1>
               <div class="input" :class="{ active: isEmailFocused || email }">
                 <input
@@ -20,7 +20,6 @@
                   v-model="email"
                   @focus="focusInput('email')"
                   @blur="blurInput('email')"
-                  required
                 />
                 <label for="email">Username or Email</label>
               </div>
@@ -31,7 +30,6 @@
                   v-model="password"
                   @focus="focusInput('password')"
                   @blur="blurInput('password')"
-                  required
                 />
                 <label for="password">Password</label>
               </div>
@@ -42,7 +40,12 @@
               <span class="checkbox forgot">
                 <a href="#">Forgot Password?</a>
               </span>
-              <button type="submit" :disabled="!email || !password">Login</button>
+              <button
+                type="submit"
+                class="login-btn"
+              >
+                Login
+              </button>
 
               <!-- 구분선 추가 -->
               <div class="divider">
@@ -50,7 +53,7 @@
               </div>
 
               <!-- 카카오 로그인 버튼 추가 -->
-              <KakaoLoginButton />
+              <KakaoLoginButton class="kakao-btn" />
             </form>
             <a href="javascript:void(0)" class="account-check" @click="toggleForm"
               >Don't have an account? <b>Sign in</b></a
@@ -145,6 +148,7 @@ const showTerms = ref(false)
 const isRegisterEmailFocused = ref(false)
 const isRegisterPasswordFocused = ref(false)
 const isConfirmPasswordFocused = ref(false)
+const emailError = ref('')
 
 onMounted(() => {
   // Remember Me 상태 복원
@@ -189,16 +193,26 @@ onMounted(() => {
 })
 
 const handleLogin = async () => {
-  if (!email.value.trim() || !password.value.trim()) {
-    toast.error('이메일과 비밀번호를 모두 입력해주세요.');
-    return;
+  // 이메일 검증
+  if (!email.value) {
+    toast.error('이메일을 입력해주세요')
+    return
   }
 
-  if (!validateEmail(email.value)) {
-    toast.error('유효한 이메일을 입력해주세요.');
-    return;
+  // 이메일 형식 검증
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.value)) {
+    toast.error('올바른 이메일 형식이 아닙니다')
+    return
   }
 
+  // 비밀번호 검증
+  if (!password.value) {
+    toast.error('비밀번호를 입력해주세요')
+    return
+  }
+
+  // 모든 검증을 통과하면 로그인 처리
   try {
     const users = JSON.parse(localStorage.getItem('users') || '[]')
     const user = users.find((u) => u.email === email.value)
@@ -828,5 +842,47 @@ button:hover {
 
 :deep(.kakao-login-btn:hover) {
   box-shadow: 0px 2px 10px rgba(254, 229, 0, 0.4);
+}
+
+.login-btn,
+.kakao-btn {
+  position: relative;  /* 추가 */
+  z-index: 10;        /* 추가 */
+  width: 100%;
+  padding: 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  touch-action: manipulation;  /* 추가 */
+  -webkit-tap-highlight-color: transparent;  /* 추가 */
+}
+
+.input {
+  position: relative;
+  z-index: 5;  /* input의 z-index를 버튼보다 낮게 설정 */
+}
+
+/* 모바일 환경을 위한 추가 스타일 */
+@media (max-width: 768px) {
+  .login-btn,
+  .kakao-btn {
+    min-height: 44px;  /* 모바일 터치 영역 최소 크기 */
+    font-size: 16px;   /* 모바일에서 읽기 쉬운 크기 */
+  }
+
+  /* 터치 영역 개선 */
+  .login-btn:active,
+  .kakao-btn:active {
+    opacity: 0.8;
+  }
+}
+
+.input.error input {
+  border-color: #e87c03;
+}
+
+.error-message {
+  color: #e87c03;
+  font-size: 13px;
+  margin-top: 6px;
 }
 </style>
