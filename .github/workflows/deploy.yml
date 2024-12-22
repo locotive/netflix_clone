@@ -35,10 +35,22 @@ jobs:
           VITE_KAKAO_REDIRECT_URI: 'https://locotive.github.io/netflix_clone/oauth/callback/kakao'
           VITE_API_BASE_URL: 'https://locotive.github.io'
         run: |
+          echo "=== 환경 변수 확인 ==="
+          echo "VITE_KAKAO_CLIENT_ID 존재 여부: $([[ ! -z "$VITE_KAKAO_CLIENT_ID" ]] && echo "YES" || echo "NO")"
+          echo "VITE_TMDB_API_KEY 존재 여부: $([[ ! -z "$VITE_TMDB_API_KEY" ]] && echo "YES" || echo "NO")"
+          echo "VITE_KAKAO_REDIRECT_URI: $VITE_KAKAO_REDIRECT_URI"
+          echo "VITE_API_BASE_URL: $VITE_API_BASE_URL"
+          
+          echo "=== .env.production 파일 생성 ==="
           echo "VITE_KAKAO_CLIENT_ID=$VITE_KAKAO_CLIENT_ID" >> .env.production
           echo "VITE_TMDB_API_KEY=$VITE_TMDB_API_KEY" >> .env.production
           echo "VITE_KAKAO_REDIRECT_URI=$VITE_KAKAO_REDIRECT_URI" >> .env.production
           echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" >> .env.production
+          
+          echo "=== .env.production 파일 내용 확인 ==="
+          cat .env.production | grep -v "KEY\|ID"
+          
+          echo "=== 빌드 시작 ==="
           npm run build
         
       - name: Setup Pages
