@@ -47,15 +47,17 @@ onMounted(async () => {
       });
 
       console.log('토큰 응답 상태:', response.status);
-      const responseText = await response.text();
-      console.log('토큰 응답 내용:', responseText);
 
       if (!response.ok) {
-        throw new Error(`토큰 요청 실패: ${response.status} ${responseText}`);
+        const errorText = await response.text();
+        throw new Error(`토큰 요청 실패: ${response.status} ${errorText}`);
       }
 
       const tokenData = await response.json();
-      console.log('토큰 발급 성공');
+      console.log('토큰 데이터:', {
+        token_type: tokenData.token_type,
+        expires_in: tokenData.expires_in
+      });
 
       const userResponse = await fetch('https://kapi.kakao.com/v2/user/me', {
         headers: {
@@ -64,11 +66,18 @@ onMounted(async () => {
       });
 
       if (!userResponse.ok) {
-        throw new Error('사용자 정보 요청 실패');
+        const errorText = await userResponse.text();
+        throw new Error(`사용자 정보 요청 실패: ${userResponse.status} ${errorText}`);
       }
 
       const userData = await userResponse.json();
+      console.log('사용자 정보 받음:', {
+        id: userData.id,
+        hasEmail: !!userData.kakao_account?.email
+      });
+
       await authStore.kakaoLogin(tokenData.access_token, userData);
+      console.log('로그인 처리 완료');
 
       toast.success('카카오 로그인 성공!');
       router.push('/');
@@ -77,7 +86,6 @@ onMounted(async () => {
         message: error.message,
         stack: error.stack
       });
-      console.error('에러 상세:', error.message);
       toast.error(error.message || '로그인 처리 중 오류가 발생했습니다.');
       router.push('/signin');
     }
