@@ -19,18 +19,24 @@ export default defineConfig(({ mode }) => {
           target: 'https://api.themoviedb.org/3',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '')
-        },
-        '/v1': {
-          target: 'https://kapi.kakao.com',
-          changeOrigin: true
-        },
-        '/oauth': {
-          target: 'https://kauth.kakao.com',
-          changeOrigin: true
         }
       }
     },
+    preview: {
+      port: 4173,
+      headers: {
+        'Content-Security-Policy': "default-src 'self' https: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data:; media-src 'self' https:;"
+      }
+    },
     envDir: '.',
-    envPrefix: 'VITE_'
+    envPrefix: 'VITE_',
+    build: {
+      sourcemap: true,
+      rollupOptions: {
+        output: {
+          manualChunks: undefined
+        }
+      }
+    }
   }
 })
