@@ -28,15 +28,29 @@ export default defineConfig(({ mode }) => {
         'Content-Security-Policy': "default-src 'self' https: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data:; media-src 'self' https:;"
       }
     },
-    envDir: '.',
-    envPrefix: 'VITE_',
     build: {
-      sourcemap: true,
+      outDir: 'dist',
+      assetsDir: 'assets',
       rollupOptions: {
         output: {
-          manualChunks: undefined
-        }
-      }
-    }
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name.split('.')
+            const extType = info[info.length - 1]
+            if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
+              return `assets/images/[name]-[hash][extname]`
+            }
+            if (/css/i.test(extType)) {
+              return `assets/css/[name]-[hash][extname]`
+            }
+            return `assets/[name]-[hash][extname]`
+          },
+          chunkFileNames: 'assets/js/[name]-[hash].js',
+          entryFileNames: 'assets/js/[name]-[hash].js',
+        },
+      },
+      sourcemap: true
+    },
+    envDir: '.',
+    envPrefix: 'VITE_'
   }
 })
