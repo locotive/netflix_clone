@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import KakaoCallback from '@/views/KakaoCallback.vue'
 
 const router = createRouter({
   history: createWebHistory('/netflix_clone/'),
@@ -39,13 +40,19 @@ const router = createRouter({
           meta: { requiresAuth: true }
         }
       ]
+    },
+    {
+      path: '/oauth/callback/kakao',
+      name: 'KakaoCallback',
+      component: KakaoCallback,
+      meta: { requiresAuth: false }
     }
   ]
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  authStore.checkAuth()
+  const isAuthenticated = authStore.checkAuth()
 
   console.log('Navigation Guard:', {
     to: to.path,
@@ -53,13 +60,17 @@ router.beforeEach((to, from, next) => {
     requiresAuth: to.meta.requiresAuth
   })
 
+  if (authStore.isAuthenticated && to.path === '/signin') {
+    next('/')
+    return
+  }
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/signin')
-  } else if (to.path === '/signin' && authStore.isAuthenticated) {
-    next('/')
-  } else {
-    next()
+    return
   }
+
+  next()
 })
 
 export default router

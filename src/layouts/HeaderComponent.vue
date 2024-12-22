@@ -18,7 +18,22 @@
       </div>
       <div class="header-right">
         <div class="user-info">
-          <span class="user-email" v-if="currentUser">{{ currentUser.email }}</span>
+          <div v-if="authStore.kakaoToken" class="user-profile">
+            <img
+              v-if="authStore.user?.kakao_account?.profile?.thumbnail_image_url"
+              :src="authStore.user.kakao_account.profile.thumbnail_image_url"
+              alt="프로필"
+              class="profile-img"
+            />
+            <span class="user-name">
+              {{ authStore.user.kakao_account?.profile?.nickname || authStore.user.kakao_account?.email }}
+            </span>
+          </div>
+
+          <div v-else-if="authStore.userEmail" class="user-profile">
+            <span class="user-email">{{ authStore.userEmail }}</span>
+          </div>
+
           <button class="logout-button" @click="handleLogout">
             <font-awesome-icon icon="right-from-bracket" />
             <span>로그아웃</span>
@@ -43,98 +58,71 @@
             <router-link to="/wishlist" @click="toggleMobileMenu">내가 찜한 리스트</router-link>
           </li>
           <li><router-link to="/search" @click="toggleMobileMenu">찾아보기</router-link></li>
-          <li><button class="logout-button" @click="handleLogout">
-            <font-awesome-icon icon="right-from-bracket" />
-            <span>로그아웃</span>
-          </button></li>
+          <li>
+            <div class="mobile-user-info">
+              <div v-if="authStore.kakaoToken" class="user-profile">
+                <img
+                  v-if="authStore.user?.kakao_account?.profile?.thumbnail_image_url"
+                  :src="authStore.user.kakao_account.profile.thumbnail_image_url"
+                  alt="프로필"
+                  class="profile-img"
+                />
+                <span class="user-name">
+                  {{ authStore.user.kakao_account?.profile?.nickname || authStore.user.kakao_account?.email }}
+                </span>
+              </div>
+              <div v-else-if="authStore.userEmail" class="user-profile">
+                <span class="user-email">{{ authStore.userEmail }}</span>
+              </div>
+            </div>
+            <button class="logout-button" @click="handleLogout">
+              <font-awesome-icon icon="right-from-bracket" />
+              <span>로그아웃</span>
+            </button>
+          </li>
         </ul>
       </nav>
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from 'vue-toastification'
 
-export default {
-  name: 'HeaderComponent',
-  setup() {
-    const isScrolled = ref(false)
-    const isMobileMenuOpen = ref(false)
-    const currentUser = ref(null)
-    const router = useRouter()
-    const authStore = useAuthStore()
-    const rememberMe = ref(false)
+const router = useRouter()
+const authStore = useAuthStore()
+const toast = useToast()
 
-    const handleScroll = () => {
-      isScrolled.value = window.scrollY > 50
-    }
+const isScrolled = ref(false)
+const isMobileMenuOpen = ref(false)
 
-    const loadUserData = () => {
-      const userData = localStorage.getItem('currentUser')
-      if (userData) {
-        currentUser.value = JSON.parse(userData)
-      }
-    }
-
-    const handleLogout = () => {
-      // localStorage에서 Remember Me 상태 확인
-      const rememberMe = localStorage.getItem('rememberMe') === 'true'
-
-      if (!rememberMe) {
-        // Remember Me가 체크되지 않았을 때만 저장된 정보를 삭제
-        localStorage.removeItem('currentUser')
-        localStorage.removeItem('TMDb-Key')
-        localStorage.removeItem('rememberMe')
-      } else {
-        // Remember Me가 체크되어 있을 때는 인증 상태만 초기화
-        localStorage.removeItem('isAuthenticated')
-      }
-
-      currentUser.value = null
-      authStore.logout()
-      router.push('/signin')
-    }
-
-    const toggleMobileMenu = () => {
-      isMobileMenuOpen.value = !isMobileMenuOpen.value
-    }
-
-    router.beforeEach((to, from, next) => {
-      console.log('Route Change Detected:', { from: from.fullPath, to: to.fullPath })
-      console.log('Route Meta:', to.meta)
-
-      const isAuthenticated = localStorage.getItem('TMDb-Key') !== null
-      console.log('Is Authenticated:', isAuthenticated)
-
-      if (to.meta.requiresAuth && !isAuthenticated) {
-        console.warn('Blocked: Authentication Required')
-        next('/signin') // 인증이 필요한 경우 로그인 페이지로 리다이렉트
-      } else {
-        next() // 경로 변경 허용
-      }
-    })
-
-    onMounted(() => {
-      window.addEventListener('scroll', handleScroll)
-      loadUserData()
-    })
-
-    onUnmounted(() => {
-      window.removeEventListener('scroll', handleScroll)
-    })
-
-    return {
-      isScrolled,
-      isMobileMenuOpen,
-      currentUser,
-      handleLogout,
-      toggleMobileMenu,
-    }
-  },
+const handleScroll = () => {
+  isScrolled.value = window.scrollY > 50
 }
+
+const handleLogout = () => {
+  authStore.logout()
+  toast.success('로그아웃되었습니다.')
+  router.push('/signin')
+  if (isMobileMenuOpen.value) {
+    toggleMobileMenu()
+  }
+}
+
+const toggleMobileMenu = () => {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <style scoped>
@@ -301,6 +289,34 @@ export default {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-name,
+.user-email {
+  color: #e5e5e5;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-user-info {
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 @media (max-width: 768px) {
   .desktop-nav {
     display: none;
@@ -348,6 +364,16 @@ export default {
     padding: 10px 20px;
     margin-top: 10px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .user-profile {
+    margin-bottom: 10px;
+  }
+
+  .mobile-nav .user-name,
+  .mobile-nav .user-email {
+    font-size: 1rem;
+    max-width: 200px;
   }
 }
 </style>

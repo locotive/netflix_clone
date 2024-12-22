@@ -43,6 +43,14 @@
                 <a href="#">Forgot Password?</a>
               </span>
               <button type="submit" :disabled="!email || !password">Login</button>
+
+              <!-- 구분선 추가 -->
+              <div class="divider">
+                <span>또는</span>
+              </div>
+
+              <!-- 카카오 로그인 버튼 추가 -->
+              <KakaoLoginButton />
             </form>
             <a href="javascript:void(0)" class="account-check" @click="toggleForm"
               >Don't have an account? <b>Sign in</b></a
@@ -117,6 +125,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 import TermsComponent from './TermsComponent.vue'
+import KakaoLoginButton from './KakaoLoginButton.vue'
 
 const router = useRouter()
 const toast = useToast()
@@ -224,7 +233,7 @@ const handleLogin = async () => {
       localStorage.removeItem('TMDb-Key')
     }
 
-    await authStore.login(password.value)
+    await authStore.login(email.value)
     toast.success('로그인되었습니다.')
     await router.push('/')
   } catch (error) {
@@ -403,8 +412,8 @@ a {
 #phone {
   width: 50svw;
   max-width: 80dvh;
-  max-height: 50dvh;
-  aspect-ratio: 3.35 / 4;
+  max-height: 60dvh;
+  aspect-ratio: 3.35 / 4.5;
   border-radius: min(2.5cqw, 2cqh);
   text-align: center;
   transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -618,7 +627,7 @@ button:hover {
   max-width: 800px;
   position: absolute;
   background-color: white;
-  padding: 27px 30px 46px 30px;
+  padding: 27px 30px 76px 30px;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.16);
   transition: all 0.4s 0.1s ease;
 
@@ -626,6 +635,7 @@ button:hover {
 
   left: 50%;
   transform: translateX(-50%);
+  min-height: 520px;
 }
 
 .card form {
@@ -647,7 +657,7 @@ button:hover {
   width: 100%;
   text-align: center;
   position: absolute;
-  bottom: 15px;
+  bottom: 25px;
   left: 0;
   opacity: 0;
   text-decoration: none;
@@ -663,12 +673,12 @@ button:hover {
 }
 
 #register.hidden {
-  top: calc(5svh + 90px) !important;
+  top: calc(5svh + 120px) !important;
   z-index: 1;
 }
 
 #login.hidden {
-  top: calc(5svh + 220px) !important;
+  top: calc(5svh + 250px) !important;
   z-index: 1;
 }
 
@@ -736,26 +746,13 @@ button:hover {
 
 @media (max-width: 768px) {
   #phone {
-    width: 70%;
-    transform: translate(-50%, -70%) scale(1); /* Scale down on small screens */
+    width: 80%;
+    max-height: 70dvh;
+    transform: translate(-50%, -60%) scale(1);
   }
 
-  #login {
-    top: -2svh !important;
-  }
-
-  #register {
-    top: -2svh !important;
-  }
-
-  #register.hidden {
-    top: calc(5svh + 90px) !important;
-    z-index: 1;
-  }
-
-  #login.hidden {
-    top: calc(5svh + 90px) !important;
-    z-index: 1;
+  .card {
+    padding: 20px 25px 66px 25px;
   }
 }
 
@@ -776,5 +773,60 @@ button:hover {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+:deep(.kakao-login-btn) {
+  margin: 20px 0;
+}
+
+/* 구분선 스타일 추가 */
+.divider {
+  position: relative;
+  text-align: center;
+  margin: 20px 0;
+  clear: both;  /* checkbox float 때문에 추가 */
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 45%;
+  height: 1px;
+  background-color: #e0e0e0;
+}
+
+.divider::before {
+  left: 0;
+}
+
+.divider::after {
+  right: 0;
+}
+
+.divider span {
+  background-color: white;
+  padding: 0 10px;
+  color: #757575;
+  font-size: 14px;
+}
+
+/* 카카오 로그인 버튼 스타일 오버라이드 */
+:deep(.kakao-login-btn) {
+  width: 100%;
+  background-color: #FEE500;
+  color: #000000;
+  font-weight: bold;
+  border: none;
+  border-radius: 50px;
+  padding: 17px;
+  text-transform: none;  /* 기존 버튼의 대문자 변환 제거 */
+  letter-spacing: normal;  /* 기존 버튼의 자간 제거 */
+  box-shadow: 0px 10px 30px rgba(254, 229, 0, 0.3);
+}
+
+:deep(.kakao-login-btn:hover) {
+  box-shadow: 0px 2px 10px rgba(254, 229, 0, 0.4);
 }
 </style>
