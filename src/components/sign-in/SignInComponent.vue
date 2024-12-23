@@ -46,18 +46,18 @@
               >
                 Login
               </button>
+            </form>
 
-              <!-- 구분선 추가 -->
+            <template v-if="isLoginVisible">
               <div class="divider">
                 <span>또는</span>
               </div>
-
-              <!-- 카카오 로그인 버튼 추가 -->
               <KakaoLoginButton class="kakao-btn" />
-            </form>
-            <a href="javascript:void(0)" class="account-check" @click="toggleForm"
-              >Don't have an account? <b>Sign in</b></a
-            >
+            </template>
+
+            <a href="javascript:void(0)" class="account-check" @click="toggleForm">
+              Already have an account? <b>Sign in</b>
+            </a>
           </div>
 
           <!-- 회원가입 폼 -->
@@ -113,7 +113,7 @@
               <button type="submit">Register</button>
             </form>
             <a href="javascript:void(0)" class="account-check" @click="toggleForm"
-              >Already have an account? <b>Sign up</b></a
+              >Don't have an account? <b>Sign up</b></a
             >
           </div>
         </div>
@@ -193,6 +193,7 @@ onMounted(() => {
 })
 
 const handleLogin = async () => {
+  // 일반 로그인 로직만 처리
   if (!email.value) {
     toast.error('이메일을 입력해주세요')
     return
@@ -210,39 +211,31 @@ const handleLogin = async () => {
     return
   }
 
-  // 비든 검증을 통과하면 로그인 처리
   try {
     const users = JSON.parse(localStorage.getItem('users') || '[]')
+    console.log('저장된 사용자 목록:', users) // 디버깅용
+
     const user = users.find((u) => u.email === email.value)
+    console.log('찾은 사용자:', user) // 디버깅용
+    console.log('입력된 비밀번호:', password.value) // 디버깅용
 
     if (!user) {
       toast.error('등록되지 않은 이메일입니다.')
       return
     }
 
-    if (user.apiKey !== password.value) {
+    if (user.password !== password.value) {
       toast.error('비밀번호가 일치하지 않습니다.')
+      console.log('저장된 비밀번호:', user.password) // 디버깅용
       return
     }
 
-    // Remember Me 설정과 사용자 정보 저장
     if (rememberMe.value) {
-      console.log('Saving user data with Remember Me...')
       localStorage.setItem('rememberMe', 'true')
-      localStorage.setItem(
-        'currentUser',
-        JSON.stringify({
-          email: email.value,
-        })
-      )
-      // 비밀번호(API Key) 저장
-      localStorage.setItem('TMDb-Key', password.value)
-      console.log('Saved API Key:', password.value)
+      localStorage.setItem('currentUser', JSON.stringify({ email: email.value }))
     } else {
-      // Remember Me가 해제되어 있으면 기존 데이터 삭제
       localStorage.removeItem('rememberMe')
       localStorage.removeItem('currentUser')
-      localStorage.removeItem('TMDb-Key')
     }
 
     await authStore.login(email.value)
@@ -304,25 +297,25 @@ const handleRegister = async () => {
   }
 
   try {
-    // 사용자 데이터 가져오기
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const users = JSON.parse(localStorage.getItem('users') || '[]')
 
-    // 이메일 중복 확인
     if (users.some((u) => u.email === registerEmail.value)) {
-      toast.error('이미 등록된 이메일입니다.');
-      return;
+      toast.error('이미 등록된 이메일입니다.')
+      return
     }
 
-    // 새로운 사용자 추가
+    // 새로운 사용자 추가 - password 필드명 확인
     users.push({
       email: registerEmail.value,
-      apiKey: registerPassword.value, // 비밀번호를 API 키로 저장
-    });
-    localStorage.setItem('users', JSON.stringify(users));
+      password: registerPassword.value  // 이 부분이 맞게 저장되는지 확인
+    })
 
-    toast.success('회원가입이 완료되었습니다.');
-    isLoginVisible.value = true;
-    email.value = registerEmail.value;
+    console.log('저장되는 사용자 데이터:', users) // 디버깅용
+    localStorage.setItem('users', JSON.stringify(users))
+
+    toast.success('회원가입이 완료되었습니다.')
+    isLoginVisible.value = true
+    email.value = registerEmail.value
 
     // 폼 초기화
     registerEmail.value = '';
@@ -330,8 +323,8 @@ const handleRegister = async () => {
     confirmPassword.value = '';
     acceptTerms.value = false;
   } catch (error) {
-    console.error('회원가입 에러:', error);
-    toast.error('회원가입 처리 중 오류가 발생했습니다.');
+    console.error('회원가입 에러:', error)
+    toast.error('회원가입 처리 중 오류가 발생했습니다.')
   }
 };
 
@@ -690,7 +683,7 @@ button:hover {
 }
 
 #login.hidden {
-  top: calc(5svh + 250px) !important;
+  top: calc(5svh + 100px) !important;
   z-index: 1;
 }
 
